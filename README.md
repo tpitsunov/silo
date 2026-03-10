@@ -104,4 +104,4 @@ Checks for Python version, `uv` presence, Keychain accessibility, and critical d
 ---
 
 ## 📜 License
-MIT © SILO Team
+MIT © Timur Pitsunov
