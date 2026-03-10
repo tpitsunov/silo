@@ -7,7 +7,7 @@ name = "silo"
 version = "0.1.0"
 description = "A lightweight framework for building secure, isolated, and LLM-ready AI skills."
 authors = [
-    { name = "SILO Team", email = "hello@silo-framework.org" },
+    { name = "Timur Pitsunov", email = "pitsunovtimur@gmail.com" },
 ]
 dependencies = [
     "keyring>=25.0.0",
