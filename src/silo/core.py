@@ -3,18 +3,23 @@ import inspect
 import sys
 import json
 import traceback
+import os
 
 class Skill:
     def __init__(self, name: str, description: str = ""):
         self.name = name
         self.description = description
         self.commands = {}
+        self.command_metadata = {}
 
-    def command(self, name: str = None):
+    def command(self, name: str = None, require_approval: bool = False):
         """Decorator to register a function as a skill command."""
         def decorator(func):
             cmd_name = name or func.__name__
             self.commands[cmd_name] = func
+            self.command_metadata[cmd_name] = {
+                "require_approval": require_approval
+            }
             return func
         return decorator
 
@@ -89,7 +94,6 @@ class Skill:
                                 if isinstance(val, str):
                                     try:
                                         # Parse JSON string to pydantic model
-                                        import json
                                         parsed_json = json.loads(val)
                                         val = param.annotation.model_validate(parsed_json)
                                     except ValidationError as e:
@@ -107,6 +111,14 @@ class Skill:
                     func_args[param_name] = val
             
             # Execute command
+            if self.command_metadata.get(args.command, {}).get("require_approval"):
+                if not self._request_approval(args.command, func_args):
+                    print(json.dumps({
+                        "error": "SILO_APPROVAL_REQUIRED",
+                        "message": "This action requires human approval which was rejected or not available."
+                    }))
+                    sys.exit(1)
+
             result = cmd_func(**func_args)
             
             # Clean output serialization
@@ -124,7 +136,6 @@ class Skill:
         except Exception as e:
             # Catch all unhandled exceptions and return safe JSON output
             error_data = {"error": str(e), "type": type(e).__name__}
-            import os
             # Only print traceback if SILO_DEBUG is set for human dev
             if os.environ.get("SILO_DEBUG") == "1":
                 traceback.print_exc()
@@ -136,4 +147,34 @@ class Skill:
         import asyncio
         from .mcp_adapter import create_mcp_server
         server = create_mcp_server(self)
-        asyncio.run(server.run_stdio_async())
+    def _request_approval(self, cmd_name: str, args: dict) -> bool:
+        """Request user approval for a critical action via TTY or Browser."""
+        # 0. Early exit for headless / CI / Automated tests
+        if os.environ.get("SILO_HEADLESS") == "1":
+            return False
+
+        # 1. TTY Prompt (rich.prompt)
+        if sys.stdin.isatty():
+            from rich.prompt import Confirm
+            from rich.console import Console
+            console = Console()
+            console.print(f"\n[bold yellow]⚠️  Action Approval Required[/bold yellow]")
+            console.print(f"Skill:    [bold]{self.name}[/bold]")
+            console.print(f"Command:  [bold]{cmd_name}[/bold]")
+            console.print(f"Arguments: {json.dumps(args, indent=2)}")
+            try:
+                return Confirm.ask("Do you want to proceed?")
+            except (KeyboardInterrupt, EOFError):
+                return False
+
+        # 2. No TTY, but has Display → Browser (the SILO premium way)
+        from .secrets import _has_display
+        if _has_display():
+            try:
+                from .interaction import prompt_approval_via_browser
+                return prompt_approval_via_browser(self.name, cmd_name, args)
+            except Exception:
+                pass 
+        
+        # 3. Headless, no TTY, no display → Structured rejection
+        return False

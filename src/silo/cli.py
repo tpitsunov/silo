@@ -85,6 +85,7 @@ def handle_test(args):
     
     # Prepare headless environment
     env = os.environ.copy()
+    env["SILO_HEADLESS"] = "1"
     # Remove real display variables to force headless secret fallback
     env.pop("DISPLAY", None)
     env.pop("WAYLAND_DISPLAY", None)
@@ -124,6 +125,9 @@ def handle_test(args):
             err_data = json.loads(stdout)
             if err_data.get("error") == "SILO_AUTH_REQUIRED":
                 print("✅ OK (Headless Auth Error correctly triggered)")
+                return
+            if err_data.get("error") == "SILO_APPROVAL_REQUIRED":
+                print("✅ OK (Headless Approval Error correctly triggered)")
                 return
         except json.JSONDecodeError:
             pass

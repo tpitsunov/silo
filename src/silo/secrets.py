@@ -11,6 +11,8 @@ console = Console()
 
 def _has_display() -> bool:
     """Check if a graphical display is available (i.e., we can open a browser)."""
+    if os.environ.get("SILO_HEADLESS") == "1":
+        return False
     if sys.platform == "darwin":
         return True  # macOS always has a window server if user is logged in
     if sys.platform == "win32":
@@ -70,7 +72,7 @@ class Secret:
         # 4. No TTY, but has display → Browser auth (the SILO way)
         if _has_display():
             try:
-                from .auth_server import prompt_via_browser
+                from .interaction import prompt_via_browser
                 token = prompt_via_browser(key_name)
                 if token:
                     try:

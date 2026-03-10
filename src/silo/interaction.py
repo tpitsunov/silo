@@ -1,7 +1,5 @@
 """
-Browser-based localhost auth server for secure token entry.
-Follows the industry-standard pattern used by GitHub CLI, Stripe CLI, gcloud, etc.
-The token never touches the terminal, stdout, or LLM context.
+Browser-based interaction server for secure token entry and action approvals.
 """
 import http.server
 import json
@@ -58,24 +56,80 @@ def prompt_via_browser(key_name: str) -> str | None:
                 self.end_headers()
                 self.wfile.write(b'{"ok": true}')
 
-                # Signal the main loop to stop
                 got_token.set()
             else:
                 self.send_response(404)
                 self.end_headers()
 
         def log_message(self, format, *args):
-            pass  # Suppress request logging to avoid leaking info to stdout
+            pass
 
     server = http.server.HTTPServer(('127.0.0.1', port), AuthHandler)
-    server.timeout = 1  # Check for token every second
+    server.timeout = 1
     url = f"http://127.0.0.1:{port}/?key={urllib.parse.quote(key_name)}"
 
     webbrowser.open(url)
 
-    # Poll-based loop: handle requests until token is submitted
     while not got_token.is_set():
         server.handle_request()
 
     server.server_close()
     return result.get("token")
+
+
+def prompt_approval_via_browser(skill_name: str, cmd_name: str, args: dict) -> bool:
+    """
+    Opens a browser window for the user to approve a critical action.
+    Returns True if approved, False if rejected or timed out.
+    """
+    result = {"approved": False}
+    port = _find_free_port()
+    decided = threading.Event()
+
+    class ApprovalHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            args_json = json.dumps(args, indent=2)
+            html = (_load_template("approval.html")
+                    .replace("{skill_name}", skill_name)
+                    .replace("{cmd_name}", cmd_name)
+                    .replace("{args_json}", args_json))
+            
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(html.encode())
+
+        def do_POST(self):
+            if self.path == "/respond":
+                length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(length)
+                try:
+                    data = json.loads(body)
+                    result["approved"] = data.get("approved", False)
+                except (json.JSONDecodeError, KeyError):
+                    pass
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"ok": true}')
+
+                decided.set()
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def log_message(self, format, *args):
+            pass
+
+    server = http.server.HTTPServer(('127.0.0.1', port), ApprovalHandler)
+    server.timeout = 1
+    url = f"http://127.0.0.1:{port}/"
+
+    webbrowser.open(url)
+
+    while not decided.is_set():
+        server.handle_request()
+
+    server.server_close()
+    return result["approved"]
