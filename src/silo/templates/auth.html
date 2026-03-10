@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SILO Auth</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f0f0f; color: #e0e0e0;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+  }
+  .card {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px;
+    padding: 2.5rem; max-width: 440px; width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .logo { font-size: 1.1rem; font-weight: 700; color: #888; margin-bottom: .5rem; letter-spacing: 2px; }
+  h1 { font-size: 1.4rem; margin-bottom: 1.5rem; color: #fff; }
+  .key-name { color: #7dd3fc; font-family: 'SF Mono', monospace; }
+  label { display: block; font-size: .85rem; color: #999; margin-bottom: .4rem; }
+  input[type=password] {
+    width: 100%; padding: .75rem 1rem; border-radius: 8px;
+    border: 1px solid #333; background: #111; color: #fff;
+    font-size: 1rem; font-family: monospace;
+    outline: none; transition: border-color .2s;
+  }
+  input[type=password]:focus { border-color: #7dd3fc; }
+  button {
+    margin-top: 1.2rem; width: 100%; padding: .75rem;
+    border: none; border-radius: 8px; cursor: pointer;
+    font-size: 1rem; font-weight: 600;
+    background: #7dd3fc; color: #0f0f0f;
+    transition: background .2s;
+  }
+  button:hover { background: #5bb8e8; }
+  .hint { margin-top: 1rem; font-size: .75rem; color: #555; text-align: center; }
+  .success { text-align: center; }
+  .success h1 { color: #4ade80; }
+  .success p { color: #888; margin-top: .5rem; }
+</style>
+</head>
+<body>
+<div class="card" id="form-card">
+  <div class="logo">SILO</div>
+  <h1>Enter secret: <span class="key-name">{key_name}</span></h1>
+  <form id="auth-form">
+    <label for="token">Paste your token below</label>
+    <input type="password" id="token" name="token" placeholder="sk-..." autofocus required>
+    <button type="submit">Save to Keychain</button>
+  </form>
+  <div class="hint">This token is sent only to your local machine and saved to the OS Keychain.<br>It will never be visible to the LLM agent.</div>
+</div>
+<div class="card success" id="success-card" style="display:none">
+  <h1>&#10003; Saved!</h1>
+  <p>The secret <span class="key-name">{key_name}</span> has been securely stored.<br>You can close this tab.</p>
+</div>
+<script>
+document.getElementById('auth-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const token = document.getElementById('token').value;
+  if (!token) return;
+  const res = await fetch('/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token })
+  });
+  if (res.ok) {
+    document.getElementById('form-card').style.display = 'none';
+    document.getElementById('success-card').style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
