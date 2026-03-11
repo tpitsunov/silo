@@ -33,7 +33,7 @@ classifiers = [
 
 [project.optional-dependencies]
 mcp = ["mcp[cli]"]
-docs = ["mkdocs-material", "mkdocs"]
+docs = ["mkdocs-material", "mkdocs", "mkdocs-static-i18n"]
 
 [project.scripts]
 silo = "silo.cli:main"
