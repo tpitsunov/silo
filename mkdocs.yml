@@ -1,7 +1,7 @@
 site_name: SILO Framework
 site_description: A lightweight framework for building secure, isolated, and LLM-ready AI skills.
 site_author: Timur Pitsunov
-# site_url: https://<username>.github.io/silo-framework/
+site_url: https://tpitsunov.github.io/silo/
 repo_url: https://github.com/tpitsunov/silo
 
 theme:
@@ -36,10 +36,10 @@ theme:
 extra:
   alternate:
     - name: English
-      link: /en/
+      link: ./
       lang: en
     - name: Русский
-      link: /ru/
+      link: ./ru/
       lang: ru
 
 plugins:
