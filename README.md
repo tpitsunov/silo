@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![MCP Ready](https://img.shields.io/badge/MCP-Ready-green.svg)](https://modelcontextprotocol.io)
-[![Docs](https://img.shields.io/badge/docs-mkdocs-blue)](https://github.com/example/silo-framework/docs)
+[![Docs](https://img.shields.io/badge/docs-mkdocs-blue)](https://github.com/tpitsunov/silo/tree/main/docs)
 
-📖 **[Read the Documentation](docs/index.md)** for a quickstart guide, details on writing skills, security, and deploying as an MCP server.
+📖 **[Read the Documentation](https://tpitsunov.github.io/silo/)** (or browse [docs/index.md](docs/index.md)) for a quickstart guide, details on writing skills, security, and deploying as an MCP server.
 
 ---
 

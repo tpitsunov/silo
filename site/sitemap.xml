@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     <url>
-        <loc>Nonecli/</loc>
-        <lastmod>2026-03-11</lastmod>
-        <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="Nonecli/"/>
-        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/cli/"/>
-    </url>
-    <url>
         <loc>None./</loc>
         <lastmod>2026-03-11</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="None"/>
         <xhtml:link rel="alternate" hreflang="ru" href="Noneru/"/>
+    </url>
+    <url>
+        <loc>Nonecli/</loc>
+        <lastmod>2026-03-11</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonecli/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/cli/"/>
     </url>
     <url>
         <loc>Nonemcp/</loc>
@@ -43,18 +43,18 @@
         <xhtml:link rel="alternate" hreflang="ru" href="Noneru/writing_skills/"/>
     </url>
     <url>
-        <loc>Noneru/cli/</loc>
-        <lastmod>2026-03-11</lastmod>
-        <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/cli/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="Nonecli/"/>
-    </url>
-    <url>
         <loc>Noneru/</loc>
         <lastmod>2026-03-11</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="Noneru/"/>
         <xhtml:link rel="alternate" hreflang="en" href="None"/>
+    </url>
+    <url>
+        <loc>Noneru/cli/</loc>
+        <lastmod>2026-03-11</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/cli/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonecli/"/>
     </url>
     <url>
         <loc>Noneru/mcp/</loc>
