@@ -21,20 +21,29 @@ def require(key_name: str) -> str:
         if not os.environ.get("SILO_RUNNER"):
             raise RuntimeError("silo.secrets.require() can only be used when running via 'silo run' or 'silo execute'")
             
-        # Try to read from STDIN (injected by the runner)
-        try:
-            raw_input = sys.stdin.read()
-            if raw_input:
-                _SECRETS_CACHE = json.loads(raw_input)
-            else:
-                _SECRETS_CACHE = {}
-        except Exception as e:
-            # Fallback to env var for older/legacy support
-            env_secrets = os.environ.get("SILO_SECRETS_JSON")
-            if env_secrets:
-                _SECRETS_CACHE = json.loads(env_secrets)
-            else:
-                _SECRETS_CACHE = {}
+        combined_secrets = {}
+        
+        # 1. Try to read from Env Var (Injected by Runner)
+        env_secrets = os.environ.get("SILO_SECRETS_JSON")
+        if env_secrets:
+            try:
+                combined_secrets.update(json.loads(env_secrets))
+            except Exception:
+                pass
+        
+        # 2. Try to read from STDIN (Primary injection via pipe)
+        # Note: We only do this if it's not a TTY, to avoid hanging on interactive input
+        if not sys.stdin.isatty():
+            try:
+                # We use a non-blocking or timed read if possible, but for SILO, 
+                # the runner closes the pipe after sending.
+                raw_input = sys.stdin.read()
+                if raw_input:
+                    combined_secrets.update(json.loads(raw_input))
+            except Exception:
+                pass
+
+        _SECRETS_CACHE = combined_secrets
 
     if key_name not in _SECRETS_CACHE:
         # 3. Check Keychain (local persistent fallback)
@@ -43,13 +52,18 @@ def require(key_name: str) -> str:
         namespace = os.environ.get("SILO_NAMESPACE")
         
         if namespace:
+            # Priority: Keychain (Skill-specific) > Hub File (Global)
             token = sm.get_desktop_secret(namespace, key_name)
+            if not token:
+                hub_secrets = sm.load_credentials()
+                token = hub_secrets.get(key_name)
+
             if token:
                 if _SECRETS_CACHE is not None:
                     # Cast to dict to avoid Pyre error
                     from typing import cast
                     cast(Dict[str, str], _SECRETS_CACHE)[key_name] = token
-                # Ensure it's tracked if found in keychain but not in meta
+                # Ensure it's tracked if found in keychain/hub but not in meta
                 hm.track_secret(namespace, key_name)
                 return token
 

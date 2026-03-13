@@ -18,7 +18,8 @@ hub = HubManager()
 @app.command()
 def init(
     name: str = typer.Argument(..., help="Name of the skill to initialize"),
-    path: Path = typer.Option(Path("."), help="Path to create the skill in")
+    path: Path = typer.Option(Path("."), help="Path to create the skill in"),
+    secrets: Optional[str] = typer.Option(None, "--secrets", "-s", help="Comma-separated list of required secrets")
 ):
     """
     Initialize a new SILO skill with boilerplate code and .siloignore.
@@ -30,9 +31,18 @@ def init(
 
     skill_dir.mkdir(parents=True)
     
+    # Prepare secrets boilerplate
+    secret_imports = ""
+    secret_calls = ""
+    if secrets:
+        secret_list = [s.strip() for s in secrets.split(",")]
+        secret_imports = "from silo.secrets import require as require_secret"
+        for s in secret_list:
+            secret_calls += f'\n    # This key is required for the tool below\n    # It will be fetched from Keychain, Env, or prompted via browser.\n    {s.lower()}_key = require_secret("{s}")'
+
     # Create skill.py
     skill_py = skill_dir / "skill.py"
-    skill_py.write_text("""# /// script
+    skill_py.write_text(f"""# /// script
 # requires-python = ">=3.9"
 # dependencies = [
 #     "silo",
@@ -42,10 +52,10 @@ def init(
 
 import requests
 from silo.skill import Skill
-from silo.secrets import require as require_secret
+{secret_imports}
 from silo.types import AgentResponse
 
-skill = Skill(namespace=\"{name}\")
+skill = Skill(namespace="{name}")
 
 @skill.instructions()
 def instructions():
@@ -57,11 +67,12 @@ def instructions():
 @skill.tool()
 def hello(name: str):
     \"\"\"A simple greeting tool.\"\"\"
-    return AgentResponse(llm_text=f\"Hello, {name}!\", raw_data={{\"status\": \"ok\"}})
+    {secret_calls}
+    return AgentResponse(llm_text=f"Hello, {{name}}!", raw_data={{"status": "ok"}})
 
-if __name__ == \"__main__\":
+if __name__ == "__main__":
     skill.run()
-""".format(name=name))
+""")
 
     # Create .siloignore
     siloignore = skill_dir / ".siloignore"
@@ -200,6 +211,96 @@ def run(
         raise typer.Exit(code=1)
         
     console.print(Panel(result.get("llm_text", json.dumps(result)), title="Execution Result"))
+
+@app.command()
+def test(
+    namespace: str = typer.Argument(..., help="Namespace of the skill to test"),
+    tool: str = typer.Argument(..., help="Tool name to execute"),
+    args: List[str] = typer.Argument(None, help="Arguments to pass to the tool (key=value)")
+):
+    """
+    Simulate a headless agent execution to verify skill output.
+    """
+    from .runner import Runner
+    runner = Runner()
+    
+    kwargs: Dict[str, Any] = {}
+    if args:
+        for a in args:
+            if "=" in a:
+                k, v = a.split("=", 1)
+                kwargs[k] = v
+            else:
+                kwargs[a] = True
+
+    # Force headless mode to verify secret fallbacks/approvals
+    os.environ["SILO_HEADLESS"] = "1"
+    
+    with console.status(f"[bold yellow]Testing {namespace}:{tool}...[/bold yellow]", spinner="dots"):
+        result = asyncio.run(runner.execute(namespace, tool, kwargs))
+    
+    # 1. Check if result is valid JSON
+    try:
+        json_output = json.dumps(result, indent=2)
+        console.print("[green]PASS:[/green] Output is valid JSON")
+    except Exception as e:
+        console.print(f"[red]FAIL:[/red] Invalid JSON output: {e}")
+        raise typer.Exit(code=1)
+
+    # 2. Check for SILO status
+    status = result.get("status", "unknown")
+    if status == "success":
+        console.print("[green]PASS:[/green] Tool executed successfully")
+    elif status == "error":
+        err_type = result.get("error_type", "UNKNOWN_ERROR")
+        console.print(f"[red]FAIL:[/red] Tool returned error status: {err_type}")
+        console.print(f"Message: {result.get('error_message')}")
+        raise typer.Exit(code=1)
+    
+    console.print(Panel(json_output, title="Test Result (JSON)"))
+
+@app.command()
+def doctor():
+    """
+    Check system health and dependencies for S.I.L.O.
+    """
+    from .security import SecurityManager
+    import platform
+    
+    table = Table(title="S.I.L.O Environment Doctor", show_header=False)
+    table.add_column("Check", style="cyan")
+    table.add_column("Status")
+
+    # 1. Python Version
+    py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    table.add_row("Python Version", py_ver)
+
+    # 2. Platform
+    table.add_row("Platform", f"{platform.system()} {platform.release()}")
+
+    # 3. uv check
+    uv_path = shutil.which("uv")
+    if uv_path:
+        table.add_row("uv Package Manager", f"[green]Found at {uv_path}[/green]")
+    else:
+        table.add_row("uv Package Manager", "[red]Not found. Please install uv (https://astral.sh/uv)[/red]")
+
+    # 4. Keychain check
+    try:
+        import keyring
+        storage = keyring.get_keyring().name
+        table.add_row("Secure Storage (Keychain)", f"[green]Available ({storage})[/green]")
+    except Exception as e:
+        table.add_row("Secure Storage (Keychain)", f"[red]Error: {e}[/red]")
+
+    # 5. Hub directory
+    silo_dir = Path.home() / ".silo"
+    if silo_dir.exists():
+        table.add_row("Hub Directory", f"[green]Exists at {silo_dir}[/green]")
+    else:
+        table.add_row("Hub Directory", "[yellow]Not initialized (will be created on first install)[/yellow]")
+
+    console.print(table)
 
 @app.command()
 def inspect(

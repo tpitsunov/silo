@@ -43,20 +43,26 @@ class Runner:
                 else:
                     raise FileNotFoundError(f"No python entrypoint found in {skill_path}")
 
-            # 1. Load tracked secrets from keychain
+            # 1. Load tracked secrets from keychain AND encrypted hub file
             sm = SecurityManager()
             tracked = self.hub.get_tracked_secrets(namespace)
             
-            if secrets is None:
-                current_secrets: Dict[str, str] = {}
-            else:
-                current_secrets = secrets
+            # Load global secrets from encrypted file
+            hub_secrets = sm.load_credentials()
             
-            from typing import cast
-            current_secrets_dict = cast(Dict[str, str], current_secrets)
+            if secrets is None:
+                current_secrets_dict: Dict[str, str] = {}
+            else:
+                from typing import cast
+                current_secrets_dict = cast(Dict[str, str], secrets)
+            
             for key in tracked:
                 if key not in current_secrets_dict:
-                    val = sm.get_desktop_secret(namespace, key)
+                    # Priority: Hub file > Keychain
+                    val = hub_secrets.get(key)
+                    if not val:
+                        val = sm.get_desktop_secret(namespace, key)
+                    
                     if isinstance(val, str):
                         current_secrets_dict[key] = str(val)
             current_secrets = current_secrets_dict
@@ -187,10 +193,16 @@ class Runner:
             )
             await proc.wait()
             
-            # Install dependencies: uv pip install -r <(uv pip compile skill.py)
-            # Simpler: uv pip install <skill.py> directly (uv supports this!)
+            # Find the SILO package root to install it (or its dependencies)
+            silo_pkg_root = Path(__file__).parent.parent.parent.resolve()
+            
+            # Install dependencies: uv pip install <entrypoint> + core dependencies
+            # We install core SILO dependencies so 'import silo' (via PYTHONPATH injection) works.
+            # In a real release, we would 'uv pip install silo'.
+            core_deps = ["pydantic", "rich", "typer", "cryptography", "rank-bm25", "keyring"]
+            
             proc = await asyncio.create_subprocess_exec(
-                uv_bin, "pip", "install", "-r", str(entrypoint), "--quiet",
+                uv_bin, "pip", "install", "-r", str(entrypoint), *core_deps, "--quiet",
                 cwd=str(skill_path),
                 env={**os.environ, "VIRTUAL_ENV": str(skill_path / ".venv")}
             )
