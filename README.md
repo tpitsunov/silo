@@ -1,13 +1,13 @@
-# 🏗️ SILO Framework
+# <img src="docs/logo.png" align="right" width="120"> 🏗️ SILO Framework
 
-**S.I.L.O** (Secure. Isolated. Lightweight. Offloaded.) is a lightweight Python framework designed specifically for building **AI Skills**—tools that LLM agents can call safely, reliably, and with zero configuration headache.
+**S.I.L.O** (Secure. Isolated. Lightweight. Offloaded.) helps developers bring their ideas to life by conquering the complexity of AI tool execution. It provides a **trusted tool ecosystem** for AI Agents—ensuring tools are invoked safely, reliably, and with zero configuration headache.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![MCP Ready](https://img.shields.io/badge/MCP-Ready-green.svg)](https://modelcontextprotocol.io)
 [![Docs](https://img.shields.io/badge/docs-mkdocs-blue)](https://github.com/tpitsunov/silo/tree/main/docs)
 
-📖 **[Read the Documentation](https://tpitsunov.github.io/silo/)** (or browse [docs/index.md](docs/index.md)) for a quickstart guide, details on writing skills, security, and deploying as an MCP server.
+📖 **[Read the Documentation](https://tpitsunov.github.io/silo/)** (or browse [docs/index.md](docs/index.md)) for a trusted starting point on writing skills, security, and deploying as an MCP server.
 
 ---
 

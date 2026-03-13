@@ -1,14 +1,11 @@
 site_name: SILO Framework
-site_description: A lightweight framework for building secure, isolated, and LLM-ready AI skills.
-site_author: Timur Pitsunov
-site_url: https://tpitsunov.github.io/silo/
-repo_url: https://github.com/tpitsunov/silo
-
 theme:
   name: material
+  logo: logo.png
+  favicon: logo.png
   language: en
   palette:
-    # Palette toggle for light mode
+    # Light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: indigo
@@ -16,7 +13,7 @@ theme:
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-    # Palette toggle for dark mode
+    # Dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: indigo
@@ -25,48 +22,44 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
-    - navigation.sections
-    - navigation.indexes
-    - navigation.top
-    - search.suggest
-    - search.highlight
     - content.code.copy
-    - i18n.alternate
-
-extra:
-  alternate:
-    - name: English
-      link: ./
-      lang: en
-    - name: Русский
-      link: ./ru/
-      lang: ru
+    - navigation.expand
+    - toc.follow
 
 plugins:
   - search
   - i18n:
+      default_language: en
       languages:
         - locale: en
           name: English
           default: true
+          build: true
         - locale: ru
           name: Русский
+          build: true
+
+nav:
+  - Welcome: index.md
+  - 🚀 Tutorials:
+      - Creating Your First Skill: tutorials/first-skill.md
+      - Building Multi-Tool Skills: tutorials/multi-tool.md
+  - 📖 User Guides:
+      - Architecture Overview: guide/architecture.md
+      - Security & Sandboxing: guide/security.md
+      - Dynamic Routing (BM25): guide/routing.md
+      - Interactive Approvals: guide/interactive.md
+  - 🛠️ Reference:
+      - CLI Commands: reference/cli.md
+      - Skill SDK: reference/skill-sdk.md
+      - Configuration (silo.yaml): reference/config.md
+  - 🔌 Integrations:
+      - Claude Desktop: integrations/claude.md
+      - Custom Orchestrators: integrations/custom.md
 
 markdown_extensions:
-  - admonition
-  - pymdownx.details
-  - pymdownx.superfences
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - toc:
-      permalink: true
-
-nav:
-  - Home: index.md
-  - Quickstart: quickstart.md
-  - Writing Skills: writing_skills.md
-  - Security & Approvals: security.md
-  - CLI Reference: cli.md
-  - MCP Deployment: mcp.md
+  - pymdownx.superfences
