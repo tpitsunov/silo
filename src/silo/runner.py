@@ -1,0 +1,207 @@
+import asyncio
+import os
+import sys
+import json
+from asyncio import subprocess
+import shutil
+from pathlib import Path
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+from .hub import HubManager
+from .security import SecurityManager
+
+
+class Runner:
+    """
+    Handles the execution of SILO skills in isolated environments using 'uv run'.
+    """
+    def __init__(self, hub: Optional[HubManager] = None):
+        self.hub = hub or HubManager()
+        self.semaphore = asyncio.Semaphore(10) # Default max_workers=10
+
+    async def execute(
+        self, 
+        namespace: str, 
+        tool_name: str, 
+        kwargs: Dict[str, Any],
+        secrets: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Executes a specific tool within a skill namespace.
+        """
+        async with self.semaphore:
+            skill_path = self.hub.get_skill_path(namespace)
+            if not skill_path.exists():
+                raise FileNotFoundError(f"Skill '{namespace}' not found in hub.")
+
+            entrypoint = skill_path / "skill.py"
+            if not entrypoint.exists():
+                # Check for other entrypoints if it's a legacy skill
+                py_files = list(skill_path.glob("*.py"))
+                if py_files:
+                    entrypoint = py_files[0]
+                else:
+                    raise FileNotFoundError(f"No python entrypoint found in {skill_path}")
+
+            # 1. Load tracked secrets from keychain
+            sm = SecurityManager()
+            tracked = self.hub.get_tracked_secrets(namespace)
+            
+            if secrets is None:
+                current_secrets: Dict[str, str] = {}
+            else:
+                current_secrets = secrets
+            
+            from typing import cast
+            current_secrets_dict = cast(Dict[str, str], current_secrets)
+            for key in tracked:
+                if key not in current_secrets_dict:
+                    val = sm.get_desktop_secret(namespace, key)
+                    if isinstance(val, str):
+                        current_secrets_dict[key] = str(val)
+            current_secrets = current_secrets_dict
+            
+            # 2. Prepare environment variables
+            env = os.environ.copy()
+            env["SILO_RUNNER"] = "1"
+            env["SILO_NAMESPACE"] = namespace
+            
+            if current_secrets:
+                # Injection via STDIN (primary) and Env Var (fallback)
+                env["SILO_SECRETS_JSON"] = json.dumps(current_secrets)
+
+            # 3. Determine the execution command
+            # Preference: Local Hub .venv > Local Project .venv > Global uv
+            venv_path = skill_path / ".venv"
+            python_bin = venv_path / "bin" / "python"
+            
+            # Find the SILO package root to inject it into the venv path
+            silo_pkg_root = Path(__file__).parent.parent.parent.resolve()
+            
+            if python_bin.exists():
+                # Direct execution via the local venv's python
+                cmd = [str(python_bin), str(entrypoint), tool_name]
+                # Inject SILO source into PYTHONPATH so it's available in the venv
+                env["PYTHONPATH"] = str(silo_pkg_root) + (":" + env.get("PYTHONPATH", "") if env.get("PYTHONPATH") else "")
+            else:
+                # Fallback to uv run (PEP 723 global cache mode)
+                try:
+                    pyproject = silo_pkg_root / "pyproject.toml"
+                    base_cmd = ["uv", "run", "--no-project"]
+                    if pyproject.exists():
+                        cmd = base_cmd + ["--with", str(silo_pkg_root), str(entrypoint), tool_name]
+                    else:
+                        cmd = base_cmd + [str(entrypoint), tool_name]
+                except Exception:
+                    cmd = ["uv", "run", "--no-project", str(entrypoint), tool_name]
+
+            # 4. Add tool arguments
+            for key, value in kwargs.items():
+                cmd.extend([f"--{key}", str(value)])
+
+            # 5. Execute
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                    env=env,
+                    cwd=str(skill_path)
+                )
+
+                # Inject secrets via STDIN as JSON (Primary method)
+                input_data = b""
+                if current_secrets:
+                    input_data = json.dumps(current_secrets).encode()
+                
+                stdout, stderr = await process.communicate(input=input_data)
+                
+                stdout_str = stdout.decode().strip()
+                stderr_str = stderr.decode().strip()
+                
+                # We attempt to parse stdout as JSON regardless of return code.
+                tool_output = None
+                try:
+                    tool_output = json.loads(stdout_str)
+                except json.JSONDecodeError:
+                    pass
+
+                if process.returncode != 0:
+                    # If it's valid JSON error from the skill, return it directly
+                    if tool_output and isinstance(tool_output, dict) and tool_output.get("status") == "error":
+                        return tool_output
+                    
+                    # Otherwise, return a generic process error
+                    return {
+                        "status": "error", 
+                        "error_message": f"Process exited with code {process.returncode}\n\n[STDERR]\n{stderr_str}\n\n[STDOUT]\n{stdout_str}",
+                        "stderr": stderr_str,
+                        "stdout": stdout_str,
+                        "exit_code": process.returncode
+                    }
+                
+                if tool_output and isinstance(tool_output, dict):
+                    # If the tool output already has 'status', 'instructions' or 'tools',
+                    # we return it directly to avoid redundant wrapping.
+                    if any(k in tool_output for k in ["status", "instructions", "tools"]):
+                        # Ensure 'status' is present if missing
+                        if "status" not in tool_output:
+                            tool_output["status"] = "success"
+                        return tool_output
+                
+                return {"status": "success", "llm_text": stdout_str, "raw_data": tool_output}
+
+            except Exception as e:
+                return {"status": "error", "error_message": str(e)}
+        
+        # Fallback return (should not be reached due to semaphore context)
+        return {"status": "error", "error_message": "Execution escaped unexpectedly."}
+
+    async def precache(self, namespace: str):
+        """
+        Creates/Syncs a local .venv for a skill in the hub using 'uv'.
+        """
+        skill_path = self.hub.get_skill_path(namespace)
+        if not skill_path.exists():
+            return False
+
+        entrypoint = skill_path / "skill.py"
+        if not entrypoint.exists():
+            return False
+
+        # 1. Create a local venv inside the skill directory
+        # We assume 'uv' is available in the path or we use the project's one
+        # To be safe, we use 'uv' command. In the user's env it might be direct.
+        # We can try to use relative path if we are in the silo repo.
+        uv_bin = "uv"
+        silo_vbin = Path(__file__).parent.parent.parent / ".venv" / "bin" / "uv"
+        if silo_vbin.exists():
+            uv_bin = str(silo_vbin)
+
+        try:
+            # Create venv: uv venv .venv
+            proc = await asyncio.create_subprocess_exec(
+                uv_bin, "venv", ".venv", "--quiet",
+                cwd=str(skill_path)
+            )
+            await proc.wait()
+            
+            # Install dependencies: uv pip install -r <(uv pip compile skill.py)
+            # Simpler: uv pip install <skill.py> directly (uv supports this!)
+            proc = await asyncio.create_subprocess_exec(
+                uv_bin, "pip", "install", "-r", str(entrypoint), "--quiet",
+                cwd=str(skill_path),
+                env={**os.environ, "VIRTUAL_ENV": str(skill_path / ".venv")}
+            )
+            await proc.wait()
+            return proc.returncode == 0
+        except Exception:
+            return False
+    
+    async def run_manual(self, namespace: str, tool_name: str, args: List[str]) -> Dict[str, Any]:
+        """
+        Manually run a skill with raw string arguments.
+        """
+        # We need to map raw args to a generic 'args' kwarg for the tool
+        return await self.execute(namespace, tool_name, {"args": " ".join(args)})

@@ -1,94 +1,81 @@
+import json
 import os
 import sys
-import json
-import getpass
-import keyring
-import keyring.errors
-from rich.console import Console
+from typing import Dict, Optional
+from pathlib import Path
+from .security import SecurityManager
+from .hub import HubManager
 
-console = Console()
-
-
-def _has_display() -> bool:
-    """Check if a graphical display is available (i.e., we can open a browser)."""
-    if os.environ.get("SILO_HEADLESS") == "1":
-        return False
-    if sys.platform == "darwin":
-        return True  # macOS always has a window server if user is logged in
-    if sys.platform == "win32":
-        return True
-    # Linux: check for DISPLAY or WAYLAND_DISPLAY
-    return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+_SECRETS_CACHE: Optional[Dict[str, str]] = None
 
 
-class Secret:
-    """Wrapper for OS Keychain to securely manage skill API keys."""
+def require(key_name: str) -> str:
+    """
+    Requested a secret during runtime. 
+    The SILO runner injects these via STDIN as a JSON object.
+    """
+    global _SECRETS_CACHE
     
-    SERVICE_NAME = "silo-agent"
-
-    @classmethod
-    def require(cls, key_name: str) -> str:
-        """
-        Retrieves a secret through a secure fallback chain:
-        1. Environment variable (headless / CI / Docker)
-        2. OS Keychain (persistent local storage)
-        3. Browser auth page on localhost (secure, no LLM exposure)
-        4. Interactive TTY prompt via getpass (manual terminal usage)
-        5. Structured JSON error for truly headless environments
-        """
-        # 1. Environment Variable (headless / CI / Docker)
-        env_token = os.environ.get(key_name)
-        if env_token:
-            return env_token
-
-        # 2. OS Keychain
+    if _SECRETS_CACHE is None:
+        # Check if we're running in a SILO runner environment
+        if not os.environ.get("SILO_RUNNER"):
+            raise RuntimeError("silo.secrets.require() can only be used when running via 'silo run' or 'silo execute'")
+            
+        # Try to read from STDIN (injected by the runner)
         try:
-            token = keyring.get_password(cls.SERVICE_NAME, key_name)
-            if token:
-                return token
-        except keyring.errors.KeyringError:
-            pass
+            raw_input = sys.stdin.read()
+            if raw_input:
+                _SECRETS_CACHE = json.loads(raw_input)
+            else:
+                _SECRETS_CACHE = {}
+        except Exception as e:
+            # Fallback to env var for older/legacy support
+            env_secrets = os.environ.get("SILO_SECRETS_JSON")
+            if env_secrets:
+                _SECRETS_CACHE = json.loads(env_secrets)
+            else:
+                _SECRETS_CACHE = {}
 
-        # 3. Interactive TTY → getpass (user running script manually)
-        if sys.stdin.isatty():
-            console.print(f"[bold yellow]Secret '{key_name}' not found in environment or keychain.[/bold yellow]")
-            try:
-                token = getpass.getpass(f"Enter value for {key_name}: ")
-                if not token:
-                    console.print("[red]Error: Token cannot be empty.[/red]")
-                    sys.exit(1)
-                
-                try:
-                    keyring.set_password(cls.SERVICE_NAME, key_name, token)
-                    console.print(f"[green]Successfully saved '{key_name}' to OS Keychain.[/green]")
-                except keyring.errors.KeyringError:
-                    console.print("[yellow]Warning: Could not save to OS Keychain (no backend available).[/yellow]")
-                    
-                return token
-            except (KeyboardInterrupt, EOFError):
-                console.print("\n[red]Cancelled by user. Exiting.[/red]")
-                sys.exit(1)
+    if key_name not in _SECRETS_CACHE:
+        # 3. Check Keychain (local persistent fallback)
+        sm = SecurityManager()
+        hm = HubManager()
+        namespace = os.environ.get("SILO_NAMESPACE")
         
-        # 4. No TTY, but has display → Browser auth (the SILO way)
-        if _has_display():
+        if namespace:
+            token = sm.get_desktop_secret(namespace, key_name)
+            if token:
+                if _SECRETS_CACHE is not None:
+                    # Cast to dict to avoid Pyre error
+                    from typing import cast
+                    cast(Dict[str, str], _SECRETS_CACHE)[key_name] = token
+                # Ensure it's tracked if found in keychain but not in meta
+                hm.track_secret(namespace, key_name)
+                return token
+
+        # 4. Interactive fallback (Premium feature)
+        if os.environ.get("SILO_HEADLESS") != "1":
             try:
                 from .interaction import prompt_via_browser
                 token = prompt_via_browser(key_name)
                 if token:
-                    try:
-                        keyring.set_password(cls.SERVICE_NAME, key_name, token)
-                    except keyring.errors.KeyringError:
-                        pass  # Token is still returned even if keychain save fails
+                    cache = _SECRETS_CACHE
+                    cache[key_name] = token
+                    
+                    # Persist the secret to keychain and track it
+                    sm = SecurityManager()
+                    hm = HubManager()
+                    
+                    # Use namespace from environment
+                    namespace = os.environ.get("SILO_NAMESPACE")
+                    if namespace:
+                        sm.set_desktop_secret(namespace, key_name, token)
+                        hm.track_secret(namespace, key_name)
+                    
                     return token
             except Exception:
-                pass  # Browser flow failed, fall through to error
+                pass
 
-        # 5. Truly headless, no display, no TTY → structured error
-        error = {
-            "error": "SILO_AUTH_REQUIRED",
-            "key": key_name,
-            "message": f"The skill requires a secret '{key_name}' which is not configured.",
-            "resolution": f"Set the environment variable '{key_name}' before running this command."
-        }
-        print(json.dumps(error))
-        sys.exit(1)
+        raise KeyError(f"Secret '{key_name}' not provided to this skill environment.")
+        
+    return _SECRETS_CACHE[key_name]

@@ -1,231 +1,330 @@
-import argparse
-import sys
+import typer
 import os
+import sys
+import json
+import shutil
+import asyncio
 from pathlib import Path
+from typing import Optional, List, Dict, Any
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from .hub import HubManager
 
+app = typer.Typer(help="SILO: Agentic Operating System CLI")
+console = Console()
+hub = HubManager()
 
-def create_init_parser(subparsers):
-    parser = subparsers.add_parser("init", help="Create a new SILO skill from a template")
-    parser.add_argument("name", help="Name of the file to create (e.g., github_skill.py)")
-    parser.add_argument("--secrets", help="Comma-separated list of required secret keys")
+@app.command()
+def init(
+    name: str = typer.Argument(..., help="Name of the skill to initialize"),
+    path: Path = typer.Option(Path("."), help="Path to create the skill in")
+):
+    """
+    Initialize a new SILO skill with boilerplate code and .siloignore.
+    """
+    skill_dir = path / name
+    if skill_dir.exists():
+        console.print(f"[red]Error:[/red] Directory '{skill_dir}' already exists.")
+        raise typer.Exit(code=1)
 
+    skill_dir.mkdir(parents=True)
+    
+    # Create skill.py
+    skill_py = skill_dir / "skill.py"
+    skill_py.write_text("""# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "silo",
+#     "requests",
+# ]
+# ///
 
-def handle_init(args):
-    filename = args.name
-    if not filename.endswith(".py"):
-        filename += ".py"
+import requests
+from silo.skill import Skill
+from silo.secrets import require as require_secret
+from silo.types import AgentResponse
+
+skill = Skill(namespace=\"{name}\")
+
+@skill.instructions()
+def instructions():
+    return \"\"\"
+    Describe the philosophical purpose and usage of this skill here.
+    The Agent will read this to understand how to use the tools.
+    \"\"\"
+
+@skill.tool()
+def hello(name: str):
+    \"\"\"A simple greeting tool.\"\"\"
+    return AgentResponse(llm_text=f\"Hello, {name}!\", raw_data={{\"status\": \"ok\"}})
+
+if __name__ == \"__main__\":
+    skill.run()
+""".format(name=name))
+
+    # Create .siloignore
+    siloignore = skill_dir / ".siloignore"
+    siloignore.write_text("""# SILO ignore file
+__pycache__/
+*.pyc
+.venv/
+.git/
+.DS_Store
+*.log
+""")
+
+    console.print(f"[green]Successfully initialized skill '{name}' in {skill_dir}[/green]")
+    console.print(f"To get started, edit [bold]{skill_py}[/bold]")
+
+@app.command()
+def install(
+    source: str = typer.Argument(..., help="Local path or registry name to install"),
+    namespace: Optional[str] = typer.Option(None, "--name", "-n", help="Override the namespace for this skill")
+):
+    """
+    Install a skill into the local SILO hub.
+    """
+    source_path = Path(source)
+    if not source_path.exists():
+        console.print(f"[red]Error:[/red] Local path '{source}' does not exist.")
+        raise typer.Exit(code=1)
+
+    # Detect namespace: Flag > Code Analysis > Folder Name
+    if not namespace:
+        # Try to peek into skill.py for Skill(namespace="...")
+        skill_file = source_path / "skill.py" if source_path.is_dir() else source_path
+        if skill_file.exists():
+            import re
+            content = skill_file.read_text()
+            match = re.search(r'Skill\(namespace=["\']([^"\']+)["\']\)', content)
+            if match:
+                namespace = match.group(1)
+    
+    if not namespace:
+        namespace = source_path.name
+
+    hub.install_local(source_path, namespace)
+    console.print(f"[green]Successfully installed skill as [bold]{namespace}[/bold] to hub.[/green]")
+
+    # Auto-inspect to prime the search cache AND create .venv
+    from .runner import Runner
+    runner = Runner()
+    with console.status(f"[bold cyan]Preparing environment for {namespace}...[/bold cyan]", spinner="dots"):
+        # 1. Fetch metadata
+        result = asyncio.run(runner.execute(namespace, "--silo-metadata", {}))
+        if result.get("status") != "error":
+            hub.save_metadata(namespace, result)
         
-    if os.path.exists(filename):
-        print(f"Error: File '{filename}' already exists.", file=sys.stderr)
-        sys.exit(1)
-        
-    secrets = []
-    if args.secrets:
-        secrets = [s.strip() for s in args.secrets.split(",")]
-        
-    # Generate the PEP 723 header
-    content = [
-        "# /// script",
-        '# requires-python = ">=3.9"',
-        '# dependencies = [',
-        '#     "silo",',
-        '# ]',
-        "# ///",
-        "",
-        "from typing import Optional",
-        "from pydantic import BaseModel, Field",
-        "from silo import Skill, Secret, JSONResponse",
-        "",
-        "app = Skill(name=\"My Skill\", description=\"A new SILO skill.\")",
-        ""
-    ]
-    
-    # Generate the stub command
-    content.append("@app.command()")
-    content.append("def do_something(param: str):")
-    content.append('    """Does something awesome."""')
-    
-    for secret in secrets:
-        content.append(f'    token = Secret.require("{secret}")')
-        
-    if not secrets:
-        content.append('    # token = Secret.require("MY_API_KEY")')
-        
-    content.append('    return JSONResponse({"status": "success", "param": param})')
-    content.append("")
-    
-    # Generate the entrypoint
-    content.append('if __name__ == "__main__":')
-    content.append('    app.run()')
-    content.append("")
-    
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write("\n".join(content))
-        
-    print(f"Successfully created '{filename}'!")
-    print(f"To run it: uv run {filename} do_something --param value")
+        # 2. Create/Sync local .venv
+        asyncio.run(runner.precache(namespace))
 
-
-def create_test_parser(subparsers):
-    parser = subparsers.add_parser("test", help="Simulate agent execution of a SILO skill")
-    parser.add_argument("script", help="Path to the skill script (e.g., skill.py)")
-    parser.add_argument("cmd_args", nargs=argparse.REMAINDER, help="Command and arguments to pass to the skill")
-
-
-def handle_test(args):
-    import subprocess
-    import json
-    
-    script = args.script
-    if not os.path.exists(script):
-        print(f"Error: Script '{script}' not found.", file=sys.stderr)
-        sys.exit(1)
-        
-    print(f"🧪 Testing SILO skill: {script}\n")
-    
-    # Prepare headless environment
-    env = os.environ.copy()
-    env["SILO_HEADLESS"] = "1"
-    # Remove real display variables to force headless secret fallback
-    env.pop("DISPLAY", None)
-    env.pop("WAYLAND_DISPLAY", None)
-    
-    cmd_base = [sys.executable, script]
-    
-    # 1. Test Manifest Generation
-    print("[1/2] Verifying manifest generation (--silo-manifest)... ", end="")
-    res = subprocess.run(cmd_base + ["--silo-manifest"], env=env, capture_output=True, text=True)
-    if res.returncode != 0:
-        print("❌ FAILED")
-        print(f"Stderr: {res.stderr}")
-        sys.exit(1)
-    if not res.stdout.strip().startswith("#"):
-        print("❌ FAILED (Output is not Markdown)")
-        sys.exit(1)
-    print("✅ OK")
-    
-    # 2. Test Execution
-    if not args.cmd_args:
-        print("\n⚠️ No command arguments provided, skipping execution test.")
-        print(f"  To test execution, run: silo test {script} <command> [--args...]")
+@app.command()
+def ps():
+    """
+    List all installed skills in the local hub.
+    """
+    skills = hub.list_skills()
+    if not skills:
+        console.print("No skills installed in hub.")
         return
+
+    def format_size(size_bytes_int: int) -> str:
+        size: float = float(size_bytes_int)
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024:
+                return f"{size:.1f} {unit}"
+            size /= 1024
+        return f"{size:.1f} TB"
+
+    table = Table(title="Installed SILO Skills")
+    table.add_column("Namespace", style="cyan")
+    table.add_column("Size (Src)", justify="right")
+    table.add_column("Size (Env)", justify="right")
+    table.add_column("Last Used", style="magenta")
+
+    for ns in skills:
+        last_used = hub.get_last_used(ns)
+        last_used_str = last_used.strftime("%Y-%m-%d %H:%M") if last_used else "Never"
         
-    cmd_str = " ".join(args.cmd_args)
-    print(f"[2/2] Verifying execution: `{' '.join(cmd_base + args.cmd_args)}`... ", end="")
-    
-    # Note: subprocess.run captures output, so sys.stdin.isatty() will be False in the child process.
-    res = subprocess.run(cmd_base + args.cmd_args, env=env, capture_output=True, text=True)
-    
-    # Process output
-    stdout = res.stdout.strip()
-    
-    if res.returncode != 0:
-        # Check if it's our expected JSON error
-        try:
-            err_data = json.loads(stdout)
-            if err_data.get("error") == "SILO_AUTH_REQUIRED":
-                print("✅ OK (Headless Auth Error correctly triggered)")
-                return
-            if err_data.get("error") == "SILO_APPROVAL_REQUIRED":
-                print("✅ OK (Headless Approval Error correctly triggered)")
-                return
-        except json.JSONDecodeError:
-            pass
-            
-        print(f"❌ FAILED (Exit code {res.returncode})")
-        if stdout: print(f"Stdout:\n{stdout}")
-        if res.stderr: print(f"Stderr:\n{res.stderr}")
-        sys.exit(1)
+        usage = hub.get_disk_usage(ns)
+        src_size = format_size(usage["source"])
+        env_size = format_size(usage["venv"])
         
-    # Standard success - Check if output is clean JSON
-    try:
-        json.loads(stdout)
-        print("✅ OK (Valid JSON output)")
-    except json.JSONDecodeError:
-        print("✅ OK (Text output)")
-        
-    if stdout:
-        print(f"\nResponse:\n{stdout}")
-
-
-def create_doctor_parser(subparsers):
-    parser = subparsers.add_parser("doctor", help="Check the health of the SILO environment")
-
-
-def handle_doctor(args):
-    import platform
-    import subprocess
-    import shutil
-    from rich.console import Console
-    from rich.panel import Panel
-    from rich.table import Table
-
-    console = Console()
-    console.print(Panel("🩺 [bold cyan]SILO Environment Doctor[/bold cyan]", expand=False))
-
-    table = Table(show_header=False, box=None)
-    
-    # 1. Platform & Python
-    py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    table.add_row("Python Version", f"[green]✅ {py_ver}[/green]" if sys.version_info >= (3, 9) else f"[red]❌ {py_ver} (Need 3.9+)[/red]")
-    table.add_row("Platform", f"[blue]{platform.system()} {platform.release()}[/blue]")
-
-    # 2. Keyring / Keychain
-    try:
-        import keyring
-        name = keyring.get_keyring().name
-        table.add_row("Keychain Backend", f"[green]✅ {name}[/green]")
-    except Exception as e:
-        table.add_row("Keychain Backend", f"[red]❌ Error: {str(e)}[/red]")
-
-    # 3. 'uv' check
-    uv_path = shutil.which("uv")
-    if uv_path:
-        try:
-            uv_ver = subprocess.check_output(["uv", "--version"], text=True).strip()
-            table.add_row("uv Package Manager", f"[green]✅ {uv_ver}[/green]")
-        except:
-            table.add_row("uv Package Manager", "[yellow]⚠️ Found but failed to get version[/yellow]")
-    else:
-        table.add_row("uv Package Manager", "[yellow]⚠️ Not found (Recommended for S.I.L.O isolation)[/yellow]")
-
-    # 4. Optional Deps
-    try:
-        import mcp
-        table.add_row("MCP Support", "[green]✅ Installed[/green]")
-    except ImportError:
-        table.add_row("MCP Support", "[yellow]⚠️ Not installed (pip install 'silo[mcp]')[/yellow]")
-
-    try:
-        import pydantic
-        table.add_row("Pydantic Support", "[green]✅ Installed[/green]")
-    except ImportError:
-        table.add_row("Pydantic Support", "[red]❌ Missing (Critical dependency)[/red]")
+        table.add_row(ns, src_size, env_size, last_used_str)
 
     console.print(table)
-    console.print("\n[bold]Next Steps:[/bold]")
-    if not uv_path:
-        console.print("- Install [bold]uv[/bold] for better skill isolation: [dim]https://github.com/astral-sh/uv[/dim]")
-    console.print("- Run [bold]silo init[/bold] to create your first skill.")
-    console.print("- Use [bold]silo test <script>[/bold] to verify agent compatibility.")
 
+@app.command()
+def remove(
+    namespace: str = typer.Argument(..., help="Namespace of the skill to remove")
+):
+    """
+    Remove a skill from the local hub.
+    """
+    if not hub.is_installed(namespace):
+        console.print(f"[red]Error:[/red] Skill '{namespace}' is not installed.")
+        raise typer.Exit(code=1)
+
+    hub.remove(namespace)
+    console.print(f"[green]Successfully removed '{namespace}' from hub.[/green]")
+
+@app.command()
+def run(
+    namespace: str = typer.Argument(..., help="Namespace of the skill"),
+    tool: str = typer.Argument(..., help="Tool name to execute"),
+    args: List[str] = typer.Argument(None, help="Arguments to pass to the tool")
+):
+    """
+    Manually execute a skill tool from the hub.
+    """
+    from .runner import Runner
+    runner = Runner()
+    
+    # Simple parsing of key=value pairs from args
+    kwargs: Dict[str, Any] = {}
+    if args:
+        for a in args:
+            if "=" in a:
+                k, v = a.split("=", 1)
+                kwargs[k] = v
+            else:
+                kwargs[a] = True
+
+    with console.status(f"[bold cyan]Executing {namespace}:{tool}...[/bold cyan]", spinner="dots"):
+        result = asyncio.run(runner.execute(namespace, tool, kwargs))
+    
+    if result.get("status") == "error":
+        msg = result.get("error_message") or result.get("message") or result.get("stderr") or "Unknown error"
+        console.print(f"[red]Error:[/red] {msg}")
+        raise typer.Exit(code=1)
+        
+    console.print(Panel(result.get("llm_text", json.dumps(result)), title="Execution Result"))
+
+@app.command()
+def inspect(
+    namespace: str = typer.Argument(..., help="Namespace of the skill to inspect")
+):
+    """
+    Display instructions and metadata for an installed skill.
+    """
+    from .runner import Runner
+    runner = Runner()
+    
+    with console.status(f"[bold cyan]Inspecting {namespace}...[/bold cyan]", spinner="dots"):
+        # We use the special internal flag to get full metadata
+        result = asyncio.run(runner.execute(namespace, "--silo-metadata", {}))
+    
+    if result.get("status") == "error":
+        msg = result.get("error_message") or result.get("message") or result.get("stderr") or "Unknown error"
+        console.print(f"[red]Error:[/red] {msg}")
+        raise typer.Exit(code=1)
+    
+    # Format and display the metadata
+    instructions = result.get("instructions", "No instructions provided.")
+    tools = result.get("tools", {})
+    
+    # Cache for search engine
+    hub.save_metadata(namespace, result)
+    
+    console.print(Panel(instructions, title=f"Skill: {namespace} (Instructions)", border_style="cyan"))
+    
+    if tools:
+        table = Table(title="Available Tools", show_header=True, header_style="bold magenta")
+        table.add_column("Tool Name", style="bold")
+        table.add_column("Description")
+        table.add_column("Approvals", justify="center")
+        
+        for name, meta in tools.items():
+            approval = "[yellow]Required[/yellow]" if meta.get("require_approval") else "[green]Auto[/green]"
+            table.add_row(name, meta.get("description", ""), approval)
+        
+        console.print(table)
+    else:
+        console.print("[yellow]No tools found in this skill.[/yellow]")
+@app.command()
+def precache(
+    namespace: str = typer.Argument(..., help="Namespace of the skill to precache")
+):
+    """
+    Pre-download dependencies for a skill using 'uv'.
+    """
+    from .runner import Runner
+    runner = Runner()
+    console.print(f"Precaching dependencies for [bold]{namespace}[/bold]...")
+    success = asyncio.run(runner.precache(namespace))
+    if success:
+        console.print("[green]Successfully precached.[/green]")
+    else:
+        console.print("[red]Failed to precache.[/red]")
+
+@app.command(name="mcp-run")
+def mcp_run():
+    """
+    Start the SILO MCP server (STDIO).
+    """
+    from .mcp_server import SiloMCPServer
+    console.print("[bold cyan]Starting SILO MCP Server...[/bold cyan]")
+    server = SiloMCPServer()
+    try:
+        asyncio.run(server.run())
+    except KeyboardInterrupt:
+        pass
+
+@app.command()
+def auth(
+    action: str = typer.Argument(..., help="Action: set, map"),
+    key: str = typer.Argument(..., help="Secret key name"),
+    value: str = typer.Argument(None, help="Secret value (for 'set')")
+):
+    """
+    Manage encrypted secrets and Keyring mappings.
+    """
+    from .security import SecurityManager
+    sm = SecurityManager()
+    
+    if action == "set":
+        if not value:
+            console.print("[red]Error:[/red] Value required for 'set' action.")
+            raise typer.Exit(1)
+        # For simplicity, we store in one file for now
+        secrets = sm.load_credentials()
+        secrets[key] = value
+        sm.save_credentials(secrets)
+        console.print(f"[green]Secret '{key}' encrypted and saved locally.[/green]")
+    elif action == "map":
+        # Placeholder for silo.yaml mapping
+        console.print(f"Mapping logic for '{key}' not yet implemented.")
+
+@app.command()
+def search(
+    query: str = typer.Argument(..., help="Search query (semantic or exact)")
+):
+    """
+    Search for tools across all installed skills using BM25.
+    """
+    from .search import SearchEngine
+    se = SearchEngine()
+    
+    with console.status(f"[bold cyan]Searching for '{query}'...[/bold cyan]", spinner="dots"):
+        results = asyncio.run(se.search(query))
+    
+    if not results:
+        console.print(f"No results found for '[yellow]{query}[/yellow]'.")
+        return
+
+    table = Table(title=f"Search results for '{query}'")
+    table.add_column("Tool (ID)", style="bold cyan")
+    table.add_column("Description")
+    
+    for res in results:
+        table.add_row(res["full_id"], res["description"])
+    
+    console.print(table)
 
 def main():
-    parser = argparse.ArgumentParser(prog="silo", description="SILO Framework CLI utilities")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-    
-    create_init_parser(subparsers)
-    create_test_parser(subparsers)
-    create_doctor_parser(subparsers)
-    
-    args = parser.parse_args()
-    
-    if args.command == "init":
-        handle_init(args)
-    elif args.command == "test":
-        handle_test(args)
-    elif args.command == "doctor":
-        handle_doctor(args)
+    app()
 
 if __name__ == "__main__":
     main()
+

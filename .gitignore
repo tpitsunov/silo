@@ -13,3 +13,5 @@ dist/
 .gemini/
 .agents/
 .task.md
+site/
+tmp/
