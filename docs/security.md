@@ -1,54 +1,46 @@
-# Security and Approvals
+# Security & Secret Management
 
-Security is a primary focus of SILO. If you put an API Key into a standard prompt or context window, the model could easily hallucinate and send it in a network request, leak it in a response, or write it to a file.
+SILO is designed with a "Security-First" philosophy, ensuring that sensitive data like API keys never leak into logs, environment history, or code repositories.
 
-SILO keeps secrets in a safe "vault" that the LLM never touches.
+## Layered Secret Management
 
-## The `Secret` Class
+When a skill calls `silo.secrets.require("KEY_NAME")`, the framework searches for the secret in this specific order:
 
-Use `Secret.require()` to fetch credentials safely and procedurally in Python, instead of relying on the LLM to provide them.
+1.  **Environment Variables**: Primarily for CI/CD or advanced users.
+2.  **OS Keychain**: The primary secure local storage. Keys are encrypted at rest by your operating system.
+3.  **Interactive Browser Auth**: If the key is missing and the environment is not "headless", SILO opens a local browser window with a secure form to collect the secret.
 
-```python
-from silo import Skill, Secret, JSONResponse
+## Keychain Persistence
 
-app = Skill("github_skill")
+Once a secret is provided via the browser, SILO automatically saves it to your system's Keychain (via the `keyring` library). This means:
+*   You only enter your API key **once** per machine.
+*   Secrets are stored separately from your project files.
+*   Secrets are tied to a specific skill `namespace`.
 
-@app.command()
-def get_profile():
-    token = Secret.require("GITHUB_TOKEN")
-    # Procedural logic here...
-    return JSONResponse({"status": "success"})
-```
+## Sandbox Isolation
 
-### How `Secret.require` resolves keys:
-When you run a command requiring a token:
+Every skill tool is executed in an isolated environment managed by `uv run`. 
+*   **No Shared State**: Skills cannot accidentally interfere with each other's memory or variables.
+*   **Dependency Pinning**: Skills use inline metadata (PEP 723) to ensure they always run with the correct library versions, preventing "dependency hell".
 
-1. **Environment Variables**: SILO checks `os.environ` first. If present, it uses it.
-2. **OS Keychain**: SILO securely queries the operating system's native keychain (Keychain Access on macOS, Credential Locker on Windows, Secret Service on Linux). This is secure on-disk storage.
-3. **Interactive Fallback**: If neither are found:
-    - If SILO detects a display environment (i.e. not headless), it automatically launches a slick, dark-mode browser tab. 
-    - You paste your API key into this local, private HTML form.
-    - SILO saves the token strictly to the OS Keychain and resumes execution. *The token never prints to the console or log.*
-4. **Headless Rejection**: If SILO is running in a purely CI/headless environment without the token (such as being executed by an LLM in the background), it throws a structured JSON error `{"error": "SILO_AUTH_REQUIRED"}` which an agent can understand and bubble up to the user.
+## Secret Tracking & Cleanup
+
+SILO maintains a `meta` file for each skill to track which secret keys it has used. When you run `silo remove <namespace>`, the framework uses this tracking data to **completely wipe** the associated secrets from your system's Keychain, ensuring no "ghost" tokens are left behind.
+
+## Headless Mode
+
+For production environments (or when being called by another AI agent), you can enable **Headless Mode** by setting `SILO_HEADLESS=1`. In this mode:
+*   Interactive browser prompts are disabled.
+*   If a secret is missing, the skill immediately returns a structured JSON error instead of hanging.
 
 ## Approvals (Human-in-the-Loop)
 
 Some actions (like deleting a database, committing code, sending an email) shouldn't be executed completely autonomously by an LLM.
 
-SILO provides a `require_approval` flag on commands.
-
+SILO provides a `require_approval` flag on tools:
 ```python
-from silo import Skill
-
-app = Skill("db_manager")
-
-@app.command(require_approval=True)
-def drop_table(table_name: str):
-    """Deletes a database table."""
-    return {"status": "table dropped"}
+@skill.tool(require_approval=True)
+def delete_database(db_name: str):
+    ...
 ```
-
-When an LLM agent executes this command, it halts before the function runs. Like the Secret feature:
-1. SILO checks if there's a TTY. If so, it asks via a clean textual `[y/N]` prompt in the terminal.
-2. If there's no TTY but there is a display, it opens a secure browser confirmation window showing the exact command and arguments that the agent is trying to execute, demanding explicit human consent.
-3. If the user rejects, or if the system is fully headless, the agent receives an error: `{"error": "SILO_APPROVAL_REQUIRED"}`.
+This forces the runner to ask for human confirmation via the terminal or a browser before allowing the tool to execute.

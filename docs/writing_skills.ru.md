@@ -1,93 +1,114 @@
-# Создание навыков
+# Создание скиллов
 
-Это руководство описывает основные концепции создания команд в SILO.
+Это руководство описывает основные концепции создания инструментов (tools) в SILO.
 
 ## Класс `Skill`
 
-Навык SILO — это экземпляр класса `Skill`, который управляет командами, парсингом аргументов, обработкой ошибок и сериализацией.
+Скилл в SILO — это экземпляр класса `Skill`, который управляет всеми инструментами, парсингом аргументов, обработкой ошибок и сериализацией.
 
 ```python
 from silo import Skill
 
-app = Skill(name="My Skill", description="Описание того, что он делает.")
+skill = Skill(namespace="github")
 ```
 
-## Создание команд
+## Создание инструментов (Tools)
 
-Команды — это функции, обернутые в декоратор `@app.command()`. SILO читает сигнатуру функции, чтобы определить аргументы, их типы и значения по умолчанию.
+Инструменты — это функции, декорированные с помощью `@skill.tool()`. SILO использует Pydantic (через `validate_call`) для автоматического определения аргументов, их типов и значений по умолчанию.
 
 ```python
-@app.command()
+@skill.tool()
 def greet(name: str, shout: bool = False):
     """Приветствует пользователя по имени."""
     msg = f"Hello, {name}!"
     if shout:
         msg = msg.upper()
-    return {"message": msg}
+    return f"Результат: {msg}"
 ```
 
-SILO автоматически преобразует это в CLI-флаги:
+SILO автоматически сопоставляет сигнатуру функции с флагами CLI:
 ```bash
-uv run my_skill.py greet --name Alice --shout True
+silo run github greet --name Alice --shout
+```
+```text title="Симуляция вывода"
+⠋ Executing github:greet...
+╭────────────────────────────── Execution Result ───────────────────────────────╮
+│ Result: HELLO, ALICE!                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
-## Использование Pydantic для сложных данных
+## Использование Pydantic для сложных входных данных
 
-LLM отлично пишут JSON. Если вашей команде нужна сложная структура данных (объект или список), используйте **Pydantic-модели** вместо длинного списка аргументов.
-
-SILO автоматически примет JSON-строку из CLI, провалидирует ее и передаст готовый объект в вашу функцию.
+LLM отлично справляются с написанием JSON. Если вашему инструменту требуется сложная структура (объект или список), используйте **Pydantic-модели** в качестве типов аргументов.
 
 ```python
 from pydantic import BaseModel
-from silo import Skill, JSONResponse
+from silo import Skill, AgentResponse
 
-app = Skill("issue_tracker")
+skill = Skill("issue_tracker")
 
 class Issue(BaseModel):
     title: str
     body: str
 
-@app.command()
+@skill.tool()
 def create_issue(repo: str, detail: Issue):
-    """Создает новую задачу в репозитории."""
+    """Создает новую задачу (issue) в репозитории."""
     # detail теперь является типизированным объектом Pydantic
     print(f"Создание задачи '{detail.title}' в {repo}")
     
-    return JSONResponse(
-        {"status": "created", "repo": repo, "issue": detail.title}
+    return AgentResponse(
+        llm_text=f"Задача '{detail.title}' создана в {repo}",
+        raw_data={"status": "created", "repo": repo, "issue": detail.title}
     )
 ```
 
-Вызов из CLI:
+Использование через CLI:
 ```bash
-uv run my_skill.py create_issue \
+silo run issue_tracker create_issue \
     --repo "user/repo" \
     --detail '{"title": "Bug", "body": "Fixed"}'
 ```
+```text title="Симуляция вывода"
+⠋ Executing issue_tracker:create_issue...
+╭────────────────────────────── Execution Result ───────────────────────────────╮
+│ Задача 'Bug' создана в user/repo                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
 
-Если JSON не соответствует модели, SILO вернет понятную ошибку, объясняющую агенту, что именно пошло не так.
+## Управление секретами
 
-## Структура ответа
-
-При возврате данных из команды ВСЕГДА возвращайте структурированный объект (словарь, список или `SiloResponse`). Агенты общаются через текстовые потоки и ищут данные, которые можно распарсить.
-
-SILO предоставляет вспомогательные классы:
-
-- **`JSONResponse(data)`**: Превращает вывод в красивый JSON.
-- **`MarkdownResponse(text)`**: Указывает, что результат — это форматированный текст.
+Для работы с конфиденциальными данными (например, API-токенами), используйте `silo.secrets.require()`. SILO возьмет на себя безопасное хранение в Keychain ОС и запросит пользователя только один раз.
 
 ```python
-from silo import Skill, JSONResponse, MarkdownResponse
+from silo import Skill, secrets
 
-app = Skill("format_tool")
+skill = Skill("github")
 
-@app.command()
+@skill.tool()
+def get_user():
+    token = secrets.require("GITHUB_TOKEN")
+    # Используйте токен в API-вызовах...
+    return "Данные пользователя получены."
+```
+
+## Структурирование вывода
+
+Инструмент SILO может возвращать:
+1. **Строку**: Автоматически оборачивается в успешный ответ.
+2. **Словарь (dict)**: Автоматически преобразуется в JSON.
+3. **`AgentResponse`**: Рекомендуемый способ предоставить раздельный контент для LLM и для вызывающей системы (оркестратора).
+
+```python
+from silo import Skill, AgentResponse
+
+skill = Skill("github")
+
+@skill.tool()
 def get_stats():
-    # Рекомендуется: возврат JSON для программной обработки агентом
-    return JSONResponse({"active": True, "users": 42})
-
-@app.command()
-def get_readme():
-    # Рекомендуется: возврат чистого Markdown
-    return MarkdownResponse("# Project README\n\nСодержимое файла.")
+    # Предоставляем детальный контекст для LLM и сырые данные для системы
+    return AgentResponse(
+        llm_text="В репозитории 42 активных пользователя, система работает стабильно.",
+        raw_data={"active_users": 42, "status": "healthy"}
+    )
 ```

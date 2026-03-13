@@ -1,93 +1,114 @@
 # Writing Skills
 
-This guide explores the core concepts of creating commands in SILO.
+This guide explores the core concepts of creating tools in SILO.
 
 ## The `Skill` Class
 
-A SILO skill is an instance of the `Skill` class, which manages all commands, argument parsing, error handling, and serialization.
+A SILO skill is an instance of the `Skill` class, which manages all tools, argument parsing, error handling, and serialization.
 
 ```python
 from silo import Skill
 
-app = Skill(name="My Skill", description="A description of what it does.")
+skill = Skill(namespace="github")
 ```
 
-## Creating Commands
+## Creating Tools
 
-Commands are functions decorated with `@app.command()`. SILO reads the function signature to determine the command's arguments, types, and defaults.
+Tools are functions decorated with `@skill.tool()`. SILO uses Pydantic via `validate_call` to determine the arguments, types, and defaults.
 
 ```python
-@app.command()
+@skill.tool()
 def greet(name: str, shout: bool = False):
     """Greets a user by name."""
     msg = f"Hello, {name}!"
     if shout:
         msg = msg.upper()
-    return {"message": msg}
+    return f"Result: {msg}"
 ```
 
 SILO automatically maps the above signature to standard CLI flags:
 ```bash
-uv run my_skill.py greet --name Alice --shout True
+silo run github greet --name Alice --shout
+```
+```text title="Output Simulation"
+⠋ Executing github:greet...
+╭────────────────────────────── Execution Result ───────────────────────────────╮
+│ HELLO, ALICE!                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
 ## Using Pydantic for Complex Input
 
-LLMs are excellent at writing JSON. If your command requires a complex structure (like an object or a list of items), use **Pydantic Model**s as argument types instead of passing long lists of separate arguments.
-
-SILO will automatically accept a JSON string from the command line, validate it against your model, and pass the parsed object to your function.
+LLMs are excellent at writing JSON. If your tool requires a complex structure (like an object or a list of items), use **Pydantic Model**s as argument types.
 
 ```python
 from pydantic import BaseModel
-from silo import Skill, JSONResponse
+from silo import Skill, AgentResponse
 
-app = Skill("issue_tracker")
+skill = Skill("issue_tracker")
 
 class Issue(BaseModel):
     title: str
     body: str
 
-@app.command()
+@skill.tool()
 def create_issue(repo: str, detail: Issue):
     """Creates a new issue in a repository."""
     # detail is now a fully typed Pydantic object
     print(f"Creating issue '{detail.title}' in {repo}")
     
-    return JSONResponse(
-        {"status": "created", "repo": repo, "issue": detail.title}
+    return AgentResponse(
+        llm_text=f"Issue '{detail.title}' created in {repo}",
+        raw_data={"status": "created", "repo": repo, "issue": detail.title}
     )
 ```
 
 Usage from the CLI:
 ```bash
-uv run my_skill.py create_issue \
+silo run issue_tracker create_issue \
     --repo "user/repo" \
     --detail '{"title": "Bug", "body": "Fixed"}'
 ```
+```text title="Output Simulation"
+⠋ Executing issue_tracker:create_issue...
+╭────────────────────────────── Execution Result ───────────────────────────────╮
+│ Issue 'Bug' created in user/repo                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
 
-If the JSON string passed to `--detail` does not match the Pydantic model structure, SILO will gracefully return a clear JSON error telling the LLM exactly which required fields were missing or incorrectly typed.
+## Managing Secrets
+
+To use sensitive data like API tokens, use `silo.secrets.require()`. SILO will handle secure storage in the OS Keychain and only prompt the user once.
+
+```python
+from silo import Skill, secrets
+
+skill = Skill("github")
+
+@skill.tool()
+def get_user():
+    token = secrets.require("GITHUB_TOKEN")
+    # Use token in your API calls...
+    return "User data retrieved."
+```
 
 ## Structuring the Output
 
-When returning data from a SILO command, ALWAYS return a clean, structured object (dictionary, list, or a `SiloResponse`). Agents communicate via text streams, so they don't look at typical `print()` outputs the way a human does. They look for parsable output, like JSON or Markdown.
-
-SILO provides helper response classes:
-
-- **`JSONResponse(dict_or_list)`**: Converts the output into prettified `json.dumps()` output.
-- **`MarkdownResponse(str)`**: Wrapper indicating that the return value is formatted text.
+When returning data from a SILO tool, you can return:
+1. **A string**: Automatically wrapped in a success response.
+2. **A dictionary**: Automatically converted to JSON.
+3. **`AgentResponse`**: The recommended way to provide separate content for the LLM and the orchestrator.
 
 ```python
-from silo import Skill, JSONResponse, MarkdownResponse
+from silo import Skill, AgentResponse
 
-app = Skill("format_tool")
+skill = Skill("github")
 
-@app.command()
+@skill.tool()
 def get_stats():
-    # Recommended: returning JSON for the agent to parse programmatically
-    return JSONResponse({"active": True, "users": 42})
-
-@app.command()
-def get_readme():
-    # Recommended: returning clear Markdown content
-    return MarkdownResponse("# Project README\n\nThis is the content.")
+    # Providing rich context for the LLM and raw data for the caller
+    return AgentResponse(
+        llm_text="The repository has 42 active users and is healthy.",
+        raw_data={"active_users": 42, "status": "healthy"}
+    )
 ```

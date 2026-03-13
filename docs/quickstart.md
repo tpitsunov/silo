@@ -1,35 +1,47 @@
 # Quickstart Guide
 
-This guide will help you install the SILO framework, create your first AI skill, test it, and run it.
+This guide will help you install the SILO framework, create your first AI skill, and run it.
 
 ## 1. Installation
 
-You can install SILO using `pip` or `uv`. We highly recommend having `uv` installed, as SILO skills are designed to run as standalone scripts with inline dependencies (PEP 723).
+You can install SILO using `pip` or `uv`. We recommend using `uv` for managing dependencies.
 
 ```bash
-pip install -e .
+pip install silo-framework
 ```
-*(assuming you are installing the framework locally for now)*
 
-To check if your environment is ready for SILO, run the doctor command:
-
+To verify installation, run:
 ```bash
-silo doctor
+silo --help
 ```
+```text title="Output Simulation"
+Usage: silo [OPTIONS] COMMAND [ARGS]...
 
-This will verify your Python version, check for `uv`, and test if the OS Keychain is working.
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  auth     Manage secret keys in the local vault.
+  init     Scaffold a new SILO skill.
+  inspect  Show detailed skill info.
+  install  Install a skill to the hub.
+  mcp-run  Run the SILO MCP server.
+  ps       List installed skills.
+  run      Execute a tool from a skill.
+  search   Search for tools semantically.
+```
 
 ## 2. Generating Your First Skill
 
-SILO provides a CLI tool to instantly scaffold new skills. Let's create a skill that interacts with GitHub. We know it will need a `GITHUB_TOKEN`.
+SILO provides a CLI tool to instantly scaffold new skills. Let's create a skill named `weather`.
 
 ```bash
-silo init github_skill.py --secrets GITHUB_TOKEN
+silo init weather
 ```
 
-This creates a new file called `github_skill.py`. Open it in your editor:
+This creates a new folder `weather` with a `skill.py` file. Open it in your editor:
 
-```python title="github_skill.py"
+```python title="weather/skill.py"
 # /// script
 # requires-python = ">=3.9"
 # dependencies = [
@@ -37,47 +49,82 @@ This creates a new file called `github_skill.py`. Open it in your editor:
 # ]
 # ///
 
-from typing import Optional
-from pydantic import BaseModel, Field
-from silo import Skill, Secret, JSONResponse
+from silo import Skill, AgentResponse
 
-app = Skill(name="My Skill", description="A new SILO skill.")
+skill = Skill(namespace="weather")
 
-@app.command()
-def do_something(param: str):
-    """Does something awesome."""
-    token = Secret.require("GITHUB_TOKEN")
-    return JSONResponse({"status": "success", "param": param})
-
-if __name__ == "__main__":
-    app.run()
+@skill.tool()
+def get_forecast(city: str):
+    """Returns the weather forecast for a city."""
+    # In a real skill, you would call a weather API here.
+    return f"The weather in {city} is sunny, 25°C."
 ```
 
-Notice the top section: The `/// script` block tells `uv` exactly what dependencies this file needs to run (in this case, just `silo`). You can run this single file anywhere on your machine without manually creating a virtual environment.
+The `/// script` block tells `uv` exactly what dependencies this file needs.
 
-## 3. Running the Skill
+## 3. Installing and Running
 
-You can test the skill standard execution via `uv`:
+To make your skill available to the SILO hub, install it:
 
 ```bash
-uv run github_skill.py do_something --param hello
+silo install ./weather
 ```
 
-**What happens?**
-Since your script requires `GITHUB_TOKEN`, SILO will look for it in the environment variables or the OS Keychain.
-If it doesn't find it, and you're running it interactively (not headless), SILO will open a local browser window, prompting you to securely enter the token. It will then save the token to your system's Keychain for future use.
-
-## 4. Testing for Agents (`silo test`)
-
-An LLM agent operates in a "headless" environment (no TTY, no browser). It is critical that your skill behaves predictably and doesn't hang waiting for user input that the agent can't provide.
-
-Use `silo test` to run your skill in simulated "headless" mode:
+Now you can run it using the SILO runner:
 
 ```bash
-silo test github_skill.py do_something --param agent_test
+silo run weather get_forecast --city "San Francisco"
+```
+```text title="Output Simulation"
+⠋ Executing weather:get_forecast...
+╭────────────────────────────── Execution Result ───────────────────────────────╮
+│ The weather in San Francisco is sunny, 25°C.                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
-`silo test` verifies that:
-1. The script can automatically generate its Markdown manifest (`SKILL.md`).
-2. Authentication fallbacks (returning clear JSON errors when secrets are missing) trigger properly instead of hanging.
-3. The output is clean, valid JSON or Markdown that the LLM can parse easily.
+## 4. How Secrets Work
+
+If your skill requires an API key, use `silo.secrets.require("KEY_NAME")`. 
+
+When you run the skill for the first time, SILO will:
+1. Check your environment variables.
+2. Check your OS Keychain.
+3. If not found, it will open a browser window to securely ask you for the key and save it to your Keychain.
+
+Next time you run the skill, it will load the key automatically from the Keychain.
+
+You can see all tools and instructions for an installed skill using:
+```bash
+silo inspect weather
+```
+```text title="Output Simulation"
+⠋ Inspecting weather...
+╭─────────────────────────── Skill: weather (Instructions) ────────────────────────────╮
+│ Use this tool when the user asks about weather or climate.                           │
+╰──────────────────────────────────────────────────────────────────────────────────────╯
+                                   Available Tools
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Tool Name    ┃ Description                                              ┃ Approvals ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━┩
+│ get_forecast │ Returns the weather forecast for a city.                  │   Auto    │
+└──────────────┴──────────────────────────────────────────────────────────┴───────────┘
+```
+
+## 6. Finding Tools
+
+If you can't remember the exact name of a tool or want to see what's available for a specific task, use the search command:
+
+```bash
+silo search "get weather"
+```
+```text title="Output Simulation"
+⠋ Searching for 'get weather'...
+                         Search results for 'get weather'
+┏━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Tool (ID)            ┃ Description                                                  ┃
+┡━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ weather.get_forecast │ Returns the weather forecast for a city.                      │
+└──────────────────────┴──────────────────────────────────────────────────────────────┘
+```
+
+SILO uses semantic matching to find the most relevant tools across all installed skills.
