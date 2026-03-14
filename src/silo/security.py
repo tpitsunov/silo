@@ -16,20 +16,35 @@ class SecurityManager:
     Handles AES-256-GCM encryption for SILO secrets.
     """
     def __init__(self, master_key: Optional[str] = None):
-        # We use a master key from environment or fallback (highly discouraged for production)
+        # 1. Resolve Master Key: Priority env > Keyring > Prompt/None
         self.master_key = master_key or os.environ.get("SILO_MASTER_KEY")
         if not self.master_key:
-            # For local dev/desktop, we might want to prompt or use a default
-            # But in the design doc, we specified it's passed at start
-            self.master_key = "default-dev-key-change-it"
+            self.master_key = keyring.get_password("silo", "master_key")
+        
+        if not self.master_key:
+            # Generate a strong master key for this installation
+            import secrets
+            self.master_key = secrets.token_urlsafe(32)
+            keyring.set_password("silo", "master_key", self.master_key)
+
+    def _get_salt(self) -> bytes:
+        """Get or generate a persistent unique salt for this installation."""
+        salt_file = SILO_DIR / ".salt"
+        if salt_file.exists():
+            return salt_file.read_bytes()
+        
+        import secrets
+        salt = secrets.token_bytes(16)
+        SILO_DIR.mkdir(parents=True, exist_ok=True)
+        salt_file.write_bytes(salt)
+        return salt
 
     def _get_aes_gcm(self) -> AESGCM:
-        # Derive a 256-bit key from the master key string
-        salt = b"silo-salt-constant" # In a real implementation, this should be stored per-file
+        # Derive a 256-bit key from the master key string and installation-specific salt
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
-            salt=salt,
+            salt=self._get_salt(),
             iterations=100000,
         )
         key = kdf.derive(self.master_key.encode())

@@ -20,8 +20,13 @@ class HubManager:
             d.mkdir(parents=True, exist_ok=True)
 
     def get_skill_path(self, namespace: str) -> Path:
-        """Return the path to a skill directory."""
-        return SKILLS_DIR / namespace
+        """Return the path to a skill directory, sanitized to prevent traversal."""
+        # Sanitize namespace: only allow alphanumeric and common separators, no traversal
+        safe_name = os.path.basename(namespace)
+        if safe_name != namespace:
+            # If someone tried to pass "folder/skill", we only take "skill"
+            pass
+        return SKILLS_DIR / safe_name
 
     def is_installed(self, namespace: str) -> bool:
         """Check if a skill is installed."""

@@ -4,6 +4,7 @@ import sys
 import json
 import shutil
 import asyncio
+import tempfile
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from rich.console import Console
@@ -91,18 +92,40 @@ __pycache__/
 @app.command()
 def install(
     source: str = typer.Argument(..., help="Local path or registry name to install"),
-    namespace: Optional[str] = typer.Option(None, "--name", "-n", help="Override the namespace for this skill")
+    namespace: Optional[str] = typer.Option(None, "--name", "-n", help="Override the namespace for this skill"),
+    remote: str = typer.Option("default", "--remote", "-r", help="Target remote registry name")
 ):
     """
     Install a skill into the local SILO hub.
     """
     source_path = Path(source)
+    namespace_override = namespace
     if not source_path.exists():
-        console.print(f"[red]Error:[/red] Local path '{source}' does not exist.")
-        raise typer.Exit(code=1)
+        # Try Registry install
+        from .registry import RegistryManager
+        reg = RegistryManager()
+        
+        with console.status(f"[bold cyan]Fetching {source} from remote '{remote}'...[/bold cyan]", spinner="dots"):
+            metadata = reg.get_skill_metadata(source, remote_name=remote)
+            if not metadata:
+                console.print(f"[red]Error:[/red] Skill '{source}' not found locally or in remote '{remote}'.")
+                raise typer.Exit(code=1)
+            
+            # Download to a temporary location first or directly to hub
+            temp_dir = Path(tempfile.gettempdir()) / f"silo_{source}"
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir)
+            
+            if reg.download_skill(source, temp_dir, remote_name=remote):
+                source_path = temp_dir
+                if not namespace_override:
+                    namespace_override = source
+            else:
+                console.print(f"[red]Error:[/red] Failed to download '{source}' from remote '{remote}'.")
+                raise typer.Exit(code=1)
 
     # Detect namespace: Flag > Code Analysis > Folder Name
-    if not namespace:
+    if not namespace_override:
         # Try to peek into skill.py for Skill(namespace="...")
         skill_file = source_path / "skill.py" if source_path.is_dir() else source_path
         if skill_file.exists():
@@ -110,13 +133,13 @@ def install(
             content = skill_file.read_text()
             match = re.search(r'Skill\(namespace=["\']([^"\']+)["\']\)', content)
             if match:
-                namespace = match.group(1)
+                namespace_override = match.group(1)
     
-    if not namespace:
-        namespace = source_path.name
+    if not namespace_override:
+        namespace_override = source_path.name
 
-    hub.install_local(source_path, namespace)
-    console.print(f"[green]Successfully installed skill as [bold]{namespace}[/bold] to hub.[/green]")
+    hub.install_local(source_path, namespace_override)
+    console.print(f"[green]Successfully installed skill as [bold]{namespace_override}[/bold] to hub.[/green]")
 
     # Auto-inspect to prime the search cache AND create .venv
     from .runner import Runner
@@ -374,16 +397,24 @@ def mcp_run():
 
 @app.command()
 def auth(
-    action: str = typer.Argument(..., help="Action: set, map"),
-    key: str = typer.Argument(..., help="Secret key name"),
-    value: str = typer.Argument(None, help="Secret value (for 'set')")
+    action: str = typer.Argument(..., help="Action: set, map, login"),
+    key: str = typer.Argument(..., help="Secret key name or API token (for login)"),
+    value: str = typer.Argument(None, help="Secret value (for 'set')"),
+    remote: str = typer.Option("default", "--remote", "-r", help="Target remote registry for login")
 ):
     """
-    Manage encrypted secrets and Keyring mappings.
+    Manage encrypted secrets, Keyring mappings, and Registry authentication.
     """
     from .security import SecurityManager
     sm = SecurityManager()
     
+    if action == "login":
+        from .registry import RegistryManager
+        reg = RegistryManager()
+        reg.set_token(key, remote_name=remote)
+        console.print(f"[green]Successfully logged in to SILO Registry '{remote}'.[/green]")
+        return
+
     if action == "set":
         if not value:
             console.print("[red]Error:[/red] Value required for 'set' action.")
@@ -399,29 +430,131 @@ def auth(
 
 @app.command()
 def search(
-    query: str = typer.Argument(..., help="Search query (semantic or exact)")
+    query: str = typer.Argument(..., help="Search query (semantic or exact)"),
+    remote: Optional[str] = typer.Option(None, "--remote", "-r", help="Target remote registry (default: 'default')"),
+    all_remotes: bool = typer.Option(False, "--all", "-a", help="Search across all configured remotes")
 ):
     """
-    Search for tools across all installed skills using BM25.
+    Search for tools locally or across the SILO ecosystem.
     """
     from .search import SearchEngine
+    from .registry import RegistryManager
     se = SearchEngine()
+    reg = RegistryManager()
     
+    results = []
     with console.status(f"[bold cyan]Searching for '{query}'...[/bold cyan]", spinner="dots"):
+        # 1. Local results
         results = asyncio.run(se.search(query))
+        
+        # 2. Remote results
+        if all_remotes:
+            for name in reg.remotes.keys():
+                remote_results = reg.search(query, remote_name=name)
+                results.extend(remote_results)
+        elif remote:
+            remote_results = reg.search(query, remote_name=remote)
+            results.extend(remote_results)
     
     if not results:
         console.print(f"No results found for '[yellow]{query}[/yellow]'.")
         return
 
     table = Table(title=f"Search results for '{query}'")
+    table.add_column("Source", style="dim")
     table.add_column("Tool (ID)", style="bold cyan")
     table.add_column("Description")
     
     for res in results:
-        table.add_row(res["full_id"], res["description"])
+        source = res.get("remote", "Local")
+        table.add_row(source, res["full_id"], res["description"])
     
     console.print(table)
+
+@app.command()
+def publish(
+    path: Path = typer.Argument(Path("."), help="Path to the skill directory"),
+    namespace: Optional[str] = typer.Option(None, "--name", "-n", help="Namespace to publish as"),
+    remote: str = typer.Option("default", "--remote", "-r", help="Target remote registry name")
+):
+    """
+    Publish a local skill to the SILO Registry.
+    """
+    from .registry import RegistryManager
+    from .runner import Runner
+    reg = RegistryManager()
+    runner = Runner()
+
+    if not path.exists():
+        console.print(f"[red]Error:[/red] Path {path} not found.")
+        raise typer.Exit(1)
+
+    # 1. Extract metadata
+    with console.status("[bold cyan]Analyzing skill...[/bold cyan]", spinner="dots"):
+        # We need the namespace to execute
+        ns = namespace
+        if not ns:
+            skill_file = path / "skill.py" if path.is_dir() else path
+            if skill_file.exists():
+                import re
+                content = skill_file.read_text()
+                match = re.search(r'Skill\(namespace=["\']([^"\']+)["\']\)', content)
+                if match:
+                    ns = match.group(1)
+        
+        if not ns:
+            ns = path.name
+
+        # Execute discovery in the current path
+        # In this context, execute_path might be needed in Runner
+        # For now, we assume it's installed or we use a temporary run
+        metadata = asyncio.run(runner.execute(ns, "--silo-metadata", {}, skill_path=path if path.is_dir() else path.parent))
+    
+    if metadata.get("status") == "error":
+        console.print(f"[red]Error analyzing skill:[/red] {metadata.get('error_message')}")
+        raise typer.Exit(1)
+
+    # 2. Upload
+    with console.status(f"[bold cyan]Publishing {ns} to remote '{remote}'...[/bold cyan]", spinner="dots"):
+        result = reg.publish(path if path.is_dir() else path.parent, metadata, remote_name=remote)
+    
+    if result.get("status") == "success":
+        console.print(f"[green]Successfully published {ns} v{result.get('version', 'unknown')} to '{remote}'![/green]")
+    else:
+        console.print(f"[red]Error publishing to '{remote}':[/red] {result.get('message', 'Unknown error')}")
+        raise typer.Exit(1)
+
+@app.command(name="remote")
+def remote_cmd(
+    action: str = typer.Argument(..., help="Action: add, remove, list"),
+    name: str = typer.Argument(None, help="Name of the remote"),
+    url: str = typer.Argument(None, help="URL of the remote (for 'add')")
+):
+    """
+    Manage remote SILO registries.
+    """
+    from .registry import RegistryManager
+    reg = RegistryManager()
+
+    if action == "add":
+        if not name or not url:
+            console.print("[red]Error:[/red] Both name and url are required for 'add'.")
+            raise typer.Exit(1)
+        reg.add_remote(name, url)
+        console.print(f"[green]Remote '{name}' added: {url}[/green]")
+    elif action == "remove":
+        if not name:
+            console.print("[red]Error:[/red] Remote name required for 'remove'.")
+            raise typer.Exit(1)
+        reg.remove_remote(name)
+        console.print(f"[green]Remote '{name}' removed.[/green]")
+    elif action == "list":
+        table = Table(title="Configured SILO Remotes")
+        table.add_column("Name", style="cyan")
+        table.add_column("URL")
+        for n, u in reg.remotes.items():
+            table.add_row(n, u)
+        console.print(table)
 
 def main():
     app()

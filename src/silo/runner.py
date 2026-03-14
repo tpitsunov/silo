@@ -67,13 +67,18 @@ class Runner:
                         current_secrets_dict[key] = str(val)
             current_secrets = current_secrets_dict
             
-            # 2. Prepare environment variables
-            env = os.environ.copy()
+            # 2. Prepare environment variables (Whitelist only)
+            essential_vars = ["PATH", "HOME", "USER", "SHELL", "TMPDIR", "PYTHONPATH"]
+            env = {k: os.environ[k] for k in essential_vars if k in os.environ}
             env["SILO_RUNNER"] = "1"
             env["SILO_NAMESPACE"] = namespace
             
+            # Pass through any SILO_ prefixed vars
+            for k, v in os.environ.items():
+                if k.startswith("SILO_") and k != "SILO_MASTER_KEY":
+                    env[k] = v
+
             if current_secrets:
-                # Injection via STDIN (primary) and Env Var (fallback)
                 env["SILO_SECRETS_JSON"] = json.dumps(current_secrets)
 
             # 3. Determine the execution command
@@ -107,13 +112,18 @@ class Runner:
 
             # 5. Execute
             try:
+                # We use a limited buffer size for pipe reading to prevent memory exhaustion
+                # Note: create_subprocess_exec 'limit' parameter is for the stream reader
+                MAX_OUTPUT_BYTES = 10 * 1024 * 1024 # 10MB limit
+                
                 process = await asyncio.create_subprocess_exec(
                     *cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     stdin=subprocess.PIPE,
                     env=env,
-                    cwd=str(skill_path)
+                    cwd=str(skill_path),
+                    limit=MAX_OUTPUT_BYTES
                 )
 
                 # Inject secrets via STDIN as JSON (Primary method)
