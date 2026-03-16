@@ -127,15 +127,19 @@ class RegistryManager:
                 return False
 
             def is_within_directory(directory, target):
-                abs_directory = os.path.abspath(directory)
-                abs_target = os.path.abspath(target)
-                prefix = os.path.commonprefix([abs_directory, abs_target])
-                return prefix == abs_directory
+                abs_directory = Path(directory).resolve()
+                abs_target = Path(target).resolve()
+                try:
+                    abs_target.relative_to(abs_directory)
+                    return True
+                except ValueError:
+                    return False
 
             def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+                path_obj = Path(path).resolve()
                 for member in tar.getmembers():
-                    member_path = os.path.join(path, member.name)
-                    if not is_within_directory(path, member_path):
+                    member_path = path_obj / member.name
+                    if not is_within_directory(path_obj, member_path):
                         raise Exception("Attempted Path Traversal in Tar File")
                 tar.extractall(path, members, numeric_owner=numeric_owner)
 

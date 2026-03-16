@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "silo"
-version = "0.1.1"
+name = "silo-framework"
+version = "0.1.2"
 description = "A lightweight framework for building secure, isolated, and LLM-ready AI skills."
 authors = [
     { name = "Timur Pitsunov", email = "pitsunovtimur@gmail.com" },
@@ -15,12 +15,13 @@ dependencies = [
     "rich>=13.0.0",
     "typer>=0.9.0",
     "cryptography>=42.0.0",
-    "rank-bm25>=0.2.2"
+    "rank-bm25>=0.2.2",
+    "hvac>=2.1.0"
 ]
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-keywords = ["ai", "mcp", "agents", "skills", "cli", "security"]
+keywords = ["ai", "mcp", "agents", "skills", "cli", "security", "automation"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -32,6 +33,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +44,9 @@ docs = ["mkdocs-material", "mkdocs", "mkdocs-static-i18n"]
 silo = "silo.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/example/silo-framework"
+Homepage = "https://tpitsunov.github.io/silo/"
+Repository = "https://github.com/tpitsunov/silo-framework"
+Issues = "https://github.com/tpitsunov/silo-framework/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/silo"]

@@ -79,7 +79,9 @@ class Runner:
                     env[k] = v
 
             if current_secrets:
-                env["SILO_SECRETS_JSON"] = json.dumps(current_secrets)
+                # We no longer pass secrets via environment variables to prevent leakage
+                # they are strictly passed via STDIN pipe.
+                pass
 
             # 3. Determine the execution command
             # Preference: Local Hub .venv > Local Project .venv > Global uv

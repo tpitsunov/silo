@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from pathlib import Path
 from .security import SecurityManager
 from .hub import HubManager
+from .vault import VaultManager
 
 _SECRETS_CACHE: Optional[Dict[str, str]] = None
 
@@ -23,20 +24,12 @@ def require(key_name: str) -> str:
             
         combined_secrets = {}
         
-        # 1. Try to read from Env Var (Injected by Runner)
-        env_secrets = os.environ.get("SILO_SECRETS_JSON")
-        if env_secrets:
-            try:
-                combined_secrets.update(json.loads(env_secrets))
-            except Exception:
-                pass
-        
-        # 2. Try to read from STDIN (Primary injection via pipe)
+        # 1. Try to read from STDIN (Primary injection via pipe)
         # Note: We only do this if it's not a TTY, to avoid hanging on interactive input
         if not sys.stdin.isatty():
             try:
-                # We use a non-blocking or timed read if possible, but for SILO, 
-                # the runner closes the pipe after sending.
+                # In SILO, the runner pipes secrets JSON to STDIN before any other input.
+                # We read everything available. The runner closes the pipe after sending.
                 raw_input = sys.stdin.read()
                 if raw_input:
                     combined_secrets.update(json.loads(raw_input))
@@ -46,6 +39,16 @@ def require(key_name: str) -> str:
         _SECRETS_CACHE = combined_secrets
 
     if key_name not in _SECRETS_CACHE:
+        # 2. Check HashiCorp Vault (External prioritize)
+        vm = VaultManager()
+        if vm.is_configured():
+            token = vm.get_secret(key_name)
+            if token:
+                if _SECRETS_CACHE is not None:
+                    from typing import cast
+                    cast(Dict[str, str], _SECRETS_CACHE)[key_name] = token
+                return token
+
         # 3. Check Keychain (local persistent fallback)
         sm = SecurityManager()
         hm = HubManager()

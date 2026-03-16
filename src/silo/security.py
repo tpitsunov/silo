@@ -37,6 +37,8 @@ class SecurityManager:
         salt = secrets.token_bytes(16)
         SILO_DIR.mkdir(parents=True, exist_ok=True)
         salt_file.write_bytes(salt)
+        # Protect salt file: Read/Write by owner only
+        os.chmod(salt_file, 0o600)
         return salt
 
     def _get_aes_gcm(self) -> AESGCM:
@@ -74,6 +76,8 @@ class SecurityManager:
         encrypted = self.encrypt_secrets(secrets)
         with open(CREDENTIALS_FILE, "wb") as f:
             f.write(encrypted)
+        # Protect credentials file: Read/Write by owner only
+        os.chmod(CREDENTIALS_FILE, 0o600)
 
     def load_credentials(self) -> Dict[str, str]:
         """Load and decrypt secrets from the hub's credentials file."""
