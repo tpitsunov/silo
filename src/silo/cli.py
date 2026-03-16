@@ -46,7 +46,7 @@ def init(
     skill_py.write_text(f"""# /// script
 # requires-python = ">=3.9"
 # dependencies = [
-#     "silo",
+#     "silo-framework",
 #     "requests",
 # ]
 # ///

@@ -88,21 +88,24 @@ class Runner:
             venv_path = skill_path / ".venv"
             python_bin = venv_path / "bin" / "python"
             
-            # Find the SILO package root to inject it into the venv path
-            silo_pkg_root = Path(__file__).parent.parent.parent.resolve()
+            # Find the SILO package roots
+            project_root = Path(__file__).parent.parent.parent.resolve()
+            src_root = project_root / "src"
             
             if python_bin.exists():
                 # Direct execution via the local venv's python
                 cmd = [str(python_bin), str(entrypoint), tool_name]
                 # Inject SILO source into PYTHONPATH so it's available in the venv
-                env["PYTHONPATH"] = str(silo_pkg_root) + (":" + env.get("PYTHONPATH", "") if env.get("PYTHONPATH") else "")
+                # We point to 'src' so 'import silo' finds 'src/silo'
+                env["PYTHONPATH"] = str(src_root) + (":" + env.get("PYTHONPATH", "") if env.get("PYTHONPATH") else "")
             else:
                 # Fallback to uv run (PEP 723 global cache mode)
                 try:
-                    pyproject = silo_pkg_root / "pyproject.toml"
+                    pyproject = project_root / "pyproject.toml"
                     base_cmd = ["uv", "run", "--no-project"]
                     if pyproject.exists():
-                        cmd = base_cmd + ["--with", str(silo_pkg_root), str(entrypoint), tool_name]
+                        # We use '--with project_root' so uv installs the local silo-framework
+                        cmd = base_cmd + ["--with", str(project_root), str(entrypoint), tool_name]
                     else:
                         cmd = base_cmd + [str(entrypoint), tool_name]
                 except Exception:
@@ -211,7 +214,7 @@ class Runner:
             # Install dependencies: uv pip install <entrypoint> + core dependencies
             # We install core SILO dependencies so 'import silo' (via PYTHONPATH injection) works.
             # In a real release, we would 'uv pip install silo'.
-            core_deps = ["pydantic", "rich", "typer", "cryptography", "rank-bm25", "keyring"]
+            core_deps = ["pydantic", "rich", "typer", "cryptography", "rank-bm25", "keyring", "hvac"]
             
             proc = await asyncio.create_subprocess_exec(
                 uv_bin, "pip", "install", "-r", str(entrypoint), *core_deps, "--quiet",
