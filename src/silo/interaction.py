@@ -1,6 +1,3 @@
-"""
-Browser-based interaction server for secure token entry and action approvals.
-"""
 import http.server
 import json
 import socket
@@ -8,6 +5,9 @@ import threading
 import urllib.parse
 import webbrowser
 from pathlib import Path
+from typing import Optional
+import secrets as secrets_lib
+import html
 
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 
@@ -24,10 +24,7 @@ def _find_free_port() -> int:
         return s.getsockname()[1]
 
 
-import secrets as secrets_lib
-import html
-
-def prompt_via_browser(key_name: str) -> str | None:
+def prompt_via_browser(key_name: str) -> Optional[str]:
     """
     Opens a browser window with a local auth page for the user to enter a token.
     Uses a secure session nonce to prevent CSRF.
