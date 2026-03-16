@@ -8,6 +8,8 @@
 
 ```bash
 pip install silo-framework
+# ИЛИ
+uv tool install silo-framework
 ```
 
 Чтобы проверить установку, запустите:
@@ -57,7 +59,10 @@ skill = Skill(namespace="weather")
 def get_forecast(city: str):
     """Возвращает прогноз погоды для города."""
     # В реальном скилле здесь был бы вызов API погоды.
-    return f"Погода в городе {city}: солнечно, 25°C."
+    return AgentResponse(
+        llm_text=f"Погода в городе {city}: солнечно, 25°C.",
+        raw_data={"city": city, "temp": 25, "condition": "sunny"}
+    )
 ```
 
 Блок `/// script` сообщает `uv`, какие зависимости нужны этому файлу.

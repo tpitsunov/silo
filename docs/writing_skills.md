@@ -81,13 +81,13 @@ silo run issue_tracker create_issue \
 To use sensitive data like API tokens, use `silo.secrets.require()`. SILO will handle secure storage in the OS Keychain and only prompt the user once.
 
 ```python
-from silo import Skill, secrets
+from silo import Skill, require_secret
 
 skill = Skill("github")
 
 @skill.tool()
 def get_user():
-    token = secrets.require("GITHUB_TOKEN")
+    token = require_secret("GITHUB_TOKEN")
     # Use token in your API calls...
     return "User data retrieved."
 ```

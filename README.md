@@ -38,32 +38,35 @@ SILO transforms the development of AI tools into a streamlined 4-step process.
 ### 1. Scaffolding
 Start with a single command to generate a compliant skill template.
 ```bash
-silo init github_skill.py --secrets GITHUB_TOKEN
+silo init github-skill --secrets GITHUB_TOKEN
 ```
-This creates a file with a **PEP 723** header, ensuring `uv` can run it with all necessary dependencies (including `silo-framework` itself) in a temporary, isolated environment.
+This creates a folder named `github-skill` with a **PEP 723** compliant `skill.py`, ensuring `uv` can run it with all necessary dependencies (including `silo-framework` itself) in a temporary, isolated environment.
 
 ### 2. Development (The Code)
 Define your commands using standard Python functions and **Pydantic** models. SILO handles the rest—argument parsing, JSON serialization, and error handling.
 
 ```python
-from silo import Skill, Secret, JSONResponse
+from silo import Skill, require_secret, AgentResponse
 from pydantic import BaseModel
 
-app = Skill("github", description="Manage GitHub issues")
+app = Skill("github")
 
 class Issue(BaseModel):
     title: str
     body: str
 
-@app.command()
+@app.tool()
 def create_issue(repo: str, detail: Issue):
     """Creates a new issue in a repository."""
     # This NEVER leaks to the LLM. 
     # It fetches from Keychain, Env, or prompts via browser.
-    token = Secret.require("GITHUB_TOKEN") 
+    token = require_secret("GITHUB_TOKEN") 
     
     # Procedural logic (Offloaded from LLM)
-    return JSONResponse({"status": "created", "repo": repo, "issue": detail.title})
+    return AgentResponse(
+        llm_text=f"Successfully created issue '{detail.title}' in {repo}",
+        raw_data={"status": "created", "repo": repo, "issue_id": 123}
+    )
 
 if __name__ == "__main__":
     app.run()

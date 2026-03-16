@@ -8,6 +8,8 @@ You can install SILO using `pip` or `uv`. We recommend using `uv` for managing d
 
 ```bash
 pip install silo-framework
+# OR
+uv tool install silo-framework
 ```
 
 To verify installation, run:
@@ -57,7 +59,10 @@ skill = Skill(namespace="weather")
 def get_forecast(city: str):
     """Returns the weather forecast for a city."""
     # In a real skill, you would call a weather API here.
-    return f"The weather in {city} is sunny, 25°C."
+    return AgentResponse(
+        llm_text=f"The weather in {city} is sunny, 25°C.",
+        raw_data={"city": city, "temp": 25, "condition": "sunny"}
+    )
 ```
 
 The `/// script` block tells `uv` exactly what dependencies this file needs.
