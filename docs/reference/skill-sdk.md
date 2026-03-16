@@ -13,6 +13,7 @@ skill = Skill(namespace="my_namespace")
 
 ### `@skill.tool(require_approval=False, time_to_live=600)`
 Registers a function as an agent-callable tool.
+
 - **`require_approval`**: If True, SILO will pause execution and request user approval.
 - **`time_to_live`**: Duration in seconds a single approval is valid for.
 
