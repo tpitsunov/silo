@@ -14,16 +14,16 @@ When a skill calls `silo.secrets.require("KEY_NAME")`, the framework searches fo
 
 Once a secret is provided via the browser, SILO automatically saves it to your system's Keychain (via the `keyring` library). This means:
 
-*   You only enter your API key **once** per machine.
-*   Secrets are stored separately from your project files.
-*   Secrets are tied to a specific skill `namespace`.
+* You only enter your API key **once** per machine.
+* Secrets are stored separately from your project files.
+* Secrets are tied to a specific skill `namespace`.
 
 ## Sandbox Isolation
 
 Every skill tool is executed in an isolated environment managed by `uv run`. 
 
-*   **No Shared State**: Skills cannot accidentally interfere with each other's memory or variables.
-*   **Dependency Pinning**: Skills use inline metadata (PEP 723) to ensure they always run with the correct library versions, preventing "dependency hell".
+* **No Shared State**: Skills cannot accidentally interfere with each other's memory or variables.
+* **Dependency Pinning**: Skills use inline metadata (PEP 723) to ensure they always run with the correct library versions, preventing "dependency hell".
 
 ## Secret Tracking & Cleanup
 
