@@ -23,6 +23,8 @@ This is the most critical security feature of SILO. Secrets (API keys, tokens) a
 3. It sends a JSON payload containing only the secrets required by that specific skill.
 4. The `silo.secrets.require()` function reads from STDIN and caches the secret in memory.
 
+For production workloads, SILO also supports priority secret retrieval from [HashiCorp Vault](../integrations/vault.md).
+
 ## 3. Local Vault Encryption
 
 SILO stores your credentials in `~/.silo/credentials.silo`.

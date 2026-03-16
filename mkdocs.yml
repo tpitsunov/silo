@@ -55,6 +55,7 @@ nav:
       - Configuration (silo.yaml): reference/config.md
   - 🔌 Integrations:
       - Claude Desktop: integrations/claude.md
+      - HashiCorp Vault: integrations/vault.md
       - Custom Orchestrators: integrations/custom.md
 
 markdown_extensions:
