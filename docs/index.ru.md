@@ -36,4 +36,5 @@ SILO помогает разработчикам воплощать идеи в 
 
 ---
 
-[Начать обучение →](tutorials/first-skill.ru.md){ .md-button .md-button--primary }
+[Быстрый старт →](guide/quickstart.ru.md){ .md-button .md-button--primary }
+[Начать обучение →](tutorials/first-skill.ru.md){ .md-button }

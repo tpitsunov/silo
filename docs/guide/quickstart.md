@@ -133,3 +133,9 @@ silo search "get weather"
 ```
 
 SILO uses semantic matching to find the most relevant tools across all installed skills.
+
+---
+
+Now that you know the basics, explore:
+* [Writing Skills](writing_skills.md): A deeper look at tools and response types.
+* [Security & Secret Management](security-overview.md): How SILO protects your data.
