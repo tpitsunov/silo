@@ -50,7 +50,7 @@ nav:
       - Architecture Overview: guide/architecture.md
       - Dynamic Routing (BM25): guide/routing.md
       - Interactive Approvals: guide/interactive.md
-      - Deep Dive: Sandboxing: guide/security.md
+      - "Deep Dive: Sandboxing": guide/security.md
   - 🛠️ Reference:
       - CLI Commands: reference/cli.md
       - Skill SDK: reference/skill-sdk.md
