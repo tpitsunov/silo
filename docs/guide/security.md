@@ -8,6 +8,7 @@ Every time an Agent calls a SILO tool, the framework spawns a fresh process usin
 ```bash
 uv run <skill_script>.py <tool_name> --args...
 ```
+
 - **Isolation**: Each skill maintains its own `.venv` and dependency list.
 - **Reproducibility**: `uv` ensures the tool runs in the exact same environment every time.
 - **Cleanup**: Transient data within the sandbox is not persisted unless explicitly saved to a mapped volume.
@@ -25,6 +26,7 @@ This is the most critical security feature of SILO. Secrets (API keys, tokens) a
 ## 3. Local Vault Encryption
 
 SILO stores your credentials in `~/.silo/credentials.silo`.
+
 - **Encryption**: AES-256-GCM (Authenticated Encryption).
 - **Master Key**: Requires a `SILO_MASTER_KEY` environment variable on the host or a Keyring login.
 - **Keyring**: On macOS, SILO integrates with Keychain for seamless, secure storage of the master key.
