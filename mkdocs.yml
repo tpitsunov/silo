@@ -41,19 +41,22 @@ plugins:
 
 nav:
   - Welcome: index.md
-  - 🚀 Tutorials:
-      - Creating Your First Skill: tutorials/first-skill.md
-      - Building Multi-Tool Skills: tutorials/multi-tool.md
+  - 🚀 Getting Started:
+      - Quickstart Guide: guide/quickstart.md
+      - Your First Skill: tutorials/first-skill.md
   - 📖 User Guides:
+      - Writing Skills: guide/writing_skills.md
+      - Security Overview: guide/security-overview.md
       - Architecture Overview: guide/architecture.md
-      - Security & Sandboxing: guide/security.md
       - Dynamic Routing (BM25): guide/routing.md
       - Interactive Approvals: guide/interactive.md
+      - Deep Dive: Sandboxing: guide/security.md
   - 🛠️ Reference:
       - CLI Commands: reference/cli.md
       - Skill SDK: reference/skill-sdk.md
       - Configuration (silo.yaml): reference/config.md
   - 🔌 Integrations:
+      - MCP Deployment: integrations/mcp.md
       - Claude Desktop: integrations/claude.md
       - HashiCorp Vault: integrations/vault.md
       - Custom Orchestrators: integrations/custom.md

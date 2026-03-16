@@ -36,4 +36,5 @@ SILO helps developers bring their ideas to life by conquering the complexity of 
 
 ---
 
-[Get Started with the Tutorial →](tutorials/first-skill.md){ .md-button .md-button--primary }
+[Quickstart Guide →](guide/quickstart.md){ .md-button .md-button--primary }
+[Get Started with the Tutorial →](tutorials/first-skill.md){ .md-button }
