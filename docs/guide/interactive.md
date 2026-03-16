@@ -37,6 +37,7 @@ Proceed? [y/N]:
 ## 4. Why it Matters
 
 Interactive approvals prevent:
+
 - **Prompt Injection**: An Agent tricked into calling a destructive command.
 - **Recursive Loops**: An Agent accidentally calling a costly API thousands of times.
 - **Drift**: An Agent making decisions that deviate from the user's intent.
