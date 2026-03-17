@@ -44,4 +44,4 @@ def delete_user(user_id: str):
 
 ---
 
-**Далее:** Ознакомьтесь со [Справочником CLI](../reference/cli.ru.md).
+**Далее:** Ознакомьтесь со [Справочником CLI](../reference/cli.md).

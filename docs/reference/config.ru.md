@@ -36,4 +36,4 @@ mappings:
 
 ---
 
-**Далее:** Узнайте, как [интегрировать SILO с Claude Desktop](../integrations/claude.ru.md).
+**Далее:** Узнайте, как [интегрировать SILO с Claude Desktop](../integrations/claude.md).

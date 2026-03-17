@@ -94,4 +94,4 @@ silo inspect quotes
 
 ---
 
-**Следующий шаг:** Узнайте, как работать с [Секретными API-ключами](../guide/security-overview.ru.md).
+**Следующий шаг:** Узнайте, как работать с [Секретными API-ключами](../guide/security-overview.md).

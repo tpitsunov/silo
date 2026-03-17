@@ -39,26 +39,26 @@ plugins:
           name: Русский
           build: true
           nav:
-            - Добро пожаловать: index.md
+            - Добро пожаловать: index.ru.md
             - 🚀 Быстрый старт:
-                - Руководство по быстрому старту: guide/quickstart.md
-                - Ваш первый скилл: tutorials/first-skill.md
+                - Руководство по быстрому старту: guide/quickstart.ru.md
+                - Ваш первый скилл: tutorials/first-skill.ru.md
             - 📖 Руководства пользователя:
-                - Написание скиллов: guide/writing_skills.md
-                - Обзор безопасности: guide/security-overview.md
-                - Обзор архитектуры: guide/architecture.md
-                - Динамическая маршрутизация (BM25): guide/routing.md
-                - Интерактивные подтверждения: guide/interactive.md
-                - "Глубокое погружение: Песочница": guide/security.md
+                - Написание скиллов: guide/writing_skills.ru.md
+                - Обзор безопасности: guide/security-overview.ru.md
+                - Обзор архитектуры: guide/architecture.ru.md
+                - Динамическая маршрутизация (BM25): guide/routing.ru.md
+                - Интерактивные подтверждения: guide/interactive.ru.md
+                - "Глубокое погружение: Песочница": guide/security.ru.md
             - 🛠️ Справочник:
-                - Команды CLI: reference/cli.md
-                - SDK для скиллов: reference/skill-sdk.md
-                - Конфигурация (silo.yaml): reference/config.md
+                - Команды CLI: reference/cli.ru.md
+                - SDK для скиллов: reference/skill-sdk.ru.md
+                - Конфигурация (silo.yaml): reference/config.ru.md
             - 🔌 Интеграции:
-                - Развертывание MCP: integrations/mcp.md
-                - Claude Desktop: integrations/claude.md
-                - HashiCorp Vault: integrations/vault.md
-                - Кастомные оркестраторы: integrations/custom.md
+                - Развертывание MCP: integrations/mcp.ru.md
+                - Claude Desktop: integrations/claude.ru.md
+                - HashiCorp Vault: integrations/vault.ru.md
+                - Кастомные оркестраторы: integrations/custom.ru.md
 
 nav:
   - Welcome: index.md
@@ -81,6 +81,15 @@ nav:
       - Claude Desktop: integrations/claude.md
       - HashiCorp Vault: integrations/vault.md
       - Custom Orchestrators: integrations/custom.md
+
+extra:
+  alternate:
+    - name: English
+      link: /
+      lang: en
+    - name: Русский
+      link: /ru/
+      lang: ru
 
 markdown_extensions:
   - pymdownx.highlight:
