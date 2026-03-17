@@ -19,8 +19,14 @@ class Runner:
     """
     def __init__(self, hub: Optional[HubManager] = None):
         self.hub = hub or HubManager()
-        self.semaphore = asyncio.Semaphore(10) # Default max_workers=10
+        self._semaphore: Optional[asyncio.Semaphore] = None
         self._uv_path: Optional[str] = None
+
+    @property
+    def semaphore(self) -> asyncio.Semaphore:
+        if self._semaphore is None:
+            self._semaphore = asyncio.Semaphore(10)
+        return self._semaphore
 
     def _get_uv_path(self) -> str:
         if self._uv_path:
