@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from .hub import HubManager
+from .core.hub import HubManager
 
 app = typer.Typer(help="SILO: Agentic Operating System CLI")
 console = Console()
@@ -43,7 +43,7 @@ def init(
 
     # Create skill.py
     skill_py = skill_dir / "skill.py"
-    skill_py.write_text(f"""# /// script
+    skill_py.write_text(f'''# /// script
 # requires-python = ">=3.9"
 # dependencies = [
 #     "silo-framework",
@@ -51,29 +51,27 @@ def init(
 # ]
 # ///
 
-import requests
 from silo.skill import Skill
-{secret_imports}
 from silo.types import AgentResponse
 
 skill = Skill(namespace="{name}")
 
 @skill.instructions()
 def instructions():
-    return \"\"\"
+    return """
     Describe the philosophical purpose and usage of this skill here.
     The Agent will read this to understand how to use the tools.
-    \"\"\"
+    """
 
 @skill.tool()
 def hello(name: str):
-    \"\"\"A simple greeting tool.\"\"\"
+    """A simple greeting tool."""
     {secret_calls}
     return AgentResponse(llm_text=f"Hello, {{name}}!", raw_data={{"status": "ok"}})
 
 if __name__ == "__main__":
     skill.run()
-""")
+''')
 
     # Create .siloignore
     siloignore = skill_dir / ".siloignore"
@@ -102,7 +100,7 @@ def install(
     namespace_override = namespace
     if not source_path.exists():
         # Try Registry install
-        from .registry import RegistryManager
+        from .services.registry import RegistryManager
         reg = RegistryManager()
         
         with console.status(f"[bold cyan]Fetching {source} from remote '{remote}'...[/bold cyan]", spinner="dots"):
@@ -142,16 +140,16 @@ def install(
     console.print(f"[green]Successfully installed skill as [bold]{namespace_override}[/bold] to hub.[/green]")
 
     # Auto-inspect to prime the search cache AND create .venv
-    from .runner import Runner
+    from .core.runner import Runner
     runner = Runner()
-    with console.status(f"[bold cyan]Preparing environment for {namespace}...[/bold cyan]", spinner="dots"):
+    with console.status(f"[bold cyan]Preparing environment for {namespace_override}...[/bold cyan]", spinner="dots"):
         # 1. Fetch metadata
-        result = asyncio.run(runner.execute(namespace, "--silo-metadata", {}))
+        result = asyncio.run(runner.execute(namespace_override, "--silo-metadata", {}))
         if result.get("status") != "error":
-            hub.save_metadata(namespace, result)
+            hub.save_metadata(namespace_override, result)
         
         # 2. Create/Sync local .venv
-        asyncio.run(runner.precache(namespace))
+        asyncio.run(runner.precache(namespace_override))
 
 @app.command()
 def ps():
@@ -212,7 +210,7 @@ def run(
     """
     Manually execute a skill tool from the hub.
     """
-    from .runner import Runner
+    from .core.runner import Runner
     runner = Runner()
     
     # Simple parsing of key=value pairs from args
@@ -244,7 +242,7 @@ def test(
     """
     Simulate a headless agent execution to verify skill output.
     """
-    from .runner import Runner
+    from .core.runner import Runner
     runner = Runner()
     
     kwargs: Dict[str, Any] = {}
@@ -287,7 +285,7 @@ def doctor():
     """
     Check system health and dependencies for S.I.L.O.
     """
-    from .security import SecurityManager
+    from .security.security import SecurityManager
     import platform
     
     table = Table(title="S.I.L.O Environment Doctor", show_header=False)
@@ -332,7 +330,7 @@ def inspect(
     """
     Display instructions and metadata for an installed skill.
     """
-    from .runner import Runner
+    from .core.runner import Runner
     runner = Runner()
     
     with console.status(f"[bold cyan]Inspecting {namespace}...[/bold cyan]", spinner="dots"):
@@ -373,7 +371,7 @@ def precache(
     """
     Pre-download dependencies for a skill using 'uv'.
     """
-    from .runner import Runner
+    from .core.runner import Runner
     runner = Runner()
     console.print(f"Precaching dependencies for [bold]{namespace}[/bold]...")
     success = asyncio.run(runner.precache(namespace))
@@ -387,7 +385,7 @@ def mcp_run():
     """
     Start the SILO MCP server (STDIO).
     """
-    from .mcp_server import SiloMCPServer
+    from .services.mcp_server import SiloMCPServer
     console.print("[bold cyan]Starting SILO MCP Server...[/bold cyan]")
     server = SiloMCPServer()
     try:
@@ -405,11 +403,11 @@ def auth(
     """
     Manage encrypted secrets, Keyring mappings, and Registry authentication.
     """
-    from .security import SecurityManager
+    from .security.security import SecurityManager
     sm = SecurityManager()
     
     if action == "login":
-        from .registry import RegistryManager
+        from .services.registry import RegistryManager
         reg = RegistryManager()
         reg.set_token(key, remote_name=remote)
         console.print(f"[green]Successfully logged in to SILO Registry '{remote}'.[/green]")
@@ -425,8 +423,7 @@ def auth(
         sm.save_credentials(secrets)
         console.print(f"[green]Secret '{key}' encrypted and saved locally.[/green]")
     elif action == "map":
-        # Placeholder for silo.yaml mapping
-        console.print(f"Mapping logic for '{key}' not yet implemented.")
+        console.print(f"Mapping logic for '{key}' is planned for a future release.")
 
 @app.command()
 def search(
@@ -437,8 +434,8 @@ def search(
     """
     Search for tools locally or across the SILO ecosystem.
     """
-    from .search import SearchEngine
-    from .registry import RegistryManager
+    from .services.search import SearchEngine
+    from .services.registry import RegistryManager
     se = SearchEngine()
     reg = RegistryManager()
     
@@ -480,8 +477,8 @@ def publish(
     """
     Publish a local skill to the SILO Registry.
     """
-    from .registry import RegistryManager
-    from .runner import Runner
+    from .services.registry import RegistryManager
+    from .core.runner import Runner
     reg = RegistryManager()
     runner = Runner()
 
