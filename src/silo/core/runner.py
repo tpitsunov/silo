@@ -1,14 +1,10 @@
 import asyncio
 import os
-import sys
 import json
 from asyncio import subprocess
-from .types import AgentResponse
-from ..ui.interaction import prompt_approval_via_browser
 import shutil
 from pathlib import Path
-from typing import Dict, Any, Optional, List
-from datetime import datetime
+from typing import List, Optional, Dict, Any
 from .hub import HubManager
 from ..security.security import SecurityManager
 
@@ -31,7 +27,7 @@ class Runner:
     def _get_uv_path(self) -> str:
         if self._uv_path:
             return self._uv_path
-        
+
         # 1. Try project venv
         # runner.py is in src/silo/core/runner.py, so we need 4 parents to reach the root
         project_root = Path(__file__).parent.parent.parent.parent.resolve()
@@ -39,20 +35,85 @@ class Runner:
         if silo_vbin.exists():
             self._uv_path = str(silo_vbin)
             return self._uv_path
-            
+
         # 2. Try shutil.which
         uv_path = shutil.which("uv")
         if uv_path:
             self._uv_path = uv_path
             return self._uv_path
-            
+
         # 3. Default to "uv"
         return "uv"
 
+    def _resolve_entrypoint(self, skill_path: Path) -> Path:
+        entrypoint = skill_path / "skill.py"
+        if not entrypoint.exists():
+            py_files = list(skill_path.glob("*.py"))
+            if py_files:
+                entrypoint = py_files[0]
+            else:
+                raise FileNotFoundError(f"No python entrypoint found in {skill_path}")
+        return entrypoint
+
+    def _resolve_secrets(self, namespace: str, user_secrets: Optional[Dict[str, str]]) -> Dict[str, str]:
+        sm = SecurityManager()
+        tracked = self.hub.get_tracked_secrets(namespace)
+        hub_secrets = sm.load_credentials()
+        secrets = user_secrets.copy() if user_secrets else {}
+        for key in tracked:
+            if key not in secrets:
+                val = hub_secrets.get(key) or sm.get_desktop_secret(namespace, key)
+                if isinstance(val, str):
+                    secrets[key] = val
+        return secrets
+
+    def _prepare_env(self, namespace: str) -> Dict[str, str]:
+        essential_vars = ["PATH", "HOME", "USER", "SHELL", "TMPDIR", "PYTHONPATH"]
+        env = {k: os.environ[k] for k in essential_vars if k in os.environ}
+        env["SILO_RUNNER"] = "1"
+        env["SILO_NAMESPACE"] = namespace
+
+        for k, v in os.environ.items():
+            if k.startswith("SILO_") and k != "SILO_MASTER_KEY":
+                env[k] = v
+        return env
+
+    def _get_execution_command(
+        self,
+        skill_path: Path,
+        entrypoint: Path,
+        tool_name: str,
+        env: Dict[str, str]
+    ) -> List[str]:
+        venv_path = skill_path / ".venv"
+        python_bin = venv_path / "bin" / "python"
+
+        project_root = Path(__file__).parent.parent.parent.parent.resolve()
+        src_root = project_root / "src"
+
+        if python_bin.exists():
+            pps = env.get("PYTHONPATH", "")
+            env["PYTHONPATH"] = f"{src_root}:" + pps if pps else str(src_root)
+            return [str(python_bin), str(entrypoint), tool_name]
+
+        try:
+            uv_bin = self._get_uv_path()
+            base_cmd = [uv_bin, "run", "--no-project"]
+            if (project_root / "pyproject.toml").exists():
+                return base_cmd + ["--with", str(project_root), str(entrypoint), tool_name]
+            return base_cmd + [str(entrypoint), tool_name]
+        except (FileNotFoundError, RuntimeError, ValueError):
+            return ["uv", "run", "--no-project", str(entrypoint), tool_name]
+
+    def _add_tool_arguments(self, cmd: List[str], kwargs: Dict[str, Any]) -> List[str]:
+        for key, value in kwargs.items():
+            cmd.extend([f"--{key}", str(value)])
+        return cmd
+
     async def execute(
-        self, 
-        namespace: str, 
-        tool_name: str, 
+        self,
+        namespace: str,
+        tool_name: str,
         kwargs: Dict[str, Any],
         secrets: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
@@ -64,94 +125,20 @@ class Runner:
             if not skill_path.exists():
                 raise FileNotFoundError(f"Skill '{namespace}' not found in hub.")
 
-            entrypoint = skill_path / "skill.py"
-            if not entrypoint.exists():
-                # Check for other entrypoints if it's a legacy skill
-                py_files = list(skill_path.glob("*.py"))
-                if py_files:
-                    entrypoint = py_files[0]
-                else:
-                    raise FileNotFoundError(f"No python entrypoint found in {skill_path}")
+            entrypoint = self._resolve_entrypoint(skill_path)
+            current_secrets = self._resolve_secrets(namespace, secrets)
+            env = self._prepare_env(namespace)
+            cmd = self._get_execution_command(skill_path, entrypoint, tool_name, env)
 
-            # 1. Load tracked secrets from keychain AND encrypted hub file
-            sm = SecurityManager()
-            tracked = self.hub.get_tracked_secrets(namespace)
-            
-            # Load global secrets from encrypted file
-            hub_secrets = sm.load_credentials()
-            
-            if secrets is None:
-                current_secrets_dict: Dict[str, str] = {}
-            else:
-                from typing import cast
-                current_secrets_dict = cast(Dict[str, str], secrets)
-            
-            for key in tracked:
-                if key not in current_secrets_dict:
-                    # Priority: Hub file > Keychain
-                    val = hub_secrets.get(key)
-                    if not val:
-                        val = sm.get_desktop_secret(namespace, key)
-                    
-                    if isinstance(val, str):
-                        current_secrets_dict[key] = str(val)
-            current_secrets = current_secrets_dict
-            
-            # 2. Prepare environment variables (Whitelist only)
-            essential_vars = ["PATH", "HOME", "USER", "SHELL", "TMPDIR", "PYTHONPATH"]
-            env = {k: os.environ[k] for k in essential_vars if k in os.environ}
-            env["SILO_RUNNER"] = "1"
-            env["SILO_NAMESPACE"] = namespace
-            
-            # Pass through any SILO_ prefixed vars
-            for k, v in os.environ.items():
-                if k.startswith("SILO_") and k != "SILO_MASTER_KEY":
-                    env[k] = v
-
-            if current_secrets:
-                # We no longer pass secrets via environment variables to prevent leakage
-                # they are strictly passed via STDIN pipe.
-                pass
-
-            # 3. Determine the execution command
-            # Preference: Local Hub .venv > Local Project .venv > Global uv
-            venv_path = skill_path / ".venv"
-            python_bin = venv_path / "bin" / "python"
-            
-            # Find the SILO package roots
-            project_root = Path(__file__).parent.parent.parent.parent.resolve()
-            src_root = project_root / "src"
-            
-            if python_bin.exists():
-                # Direct execution via the local venv's python
-                cmd = [str(python_bin), str(entrypoint), tool_name]
-                # Inject SILO source into PYTHONPATH so it's available in the venv
-                # We point to 'src' so 'import silo' finds 'src/silo'
-                env["PYTHONPATH"] = str(src_root) + (":" + env.get("PYTHONPATH", "") if env.get("PYTHONPATH") else "")
-            else:
-                # Fallback to uv run (PEP 723 global cache mode)
-                try:
-                    pyproject = project_root / "pyproject.toml"
-                    uv_bin = self._get_uv_path()
-                    base_cmd = [uv_bin, "run", "--no-project"]
-                    if pyproject.exists():
-                        # We use '--with project_root' so uv installs the local silo-framework
-                        cmd = base_cmd + ["--with", str(project_root), str(entrypoint), tool_name]
-                    else:
-                        cmd = base_cmd + [str(entrypoint), tool_name]
-                except Exception:
-                    cmd = ["uv", "run", "--no-project", str(entrypoint), tool_name]
-
-            # 4. Add tool arguments
-            for key, value in kwargs.items():
-                cmd.extend([f"--{key}", str(value)])
+            # 4. Prepare STDIN payload
+            cmd = self._add_tool_arguments(cmd, kwargs)
 
             # 5. Execute
             try:
                 # We use a limited buffer size for pipe reading to prevent memory exhaustion
                 # Note: create_subprocess_exec 'limit' parameter is for the stream reader
                 MAX_OUTPUT_BYTES = 10 * 1024 * 1024 # 10MB limit
-                
+
                 process = await asyncio.create_subprocess_exec(
                     *cmd,
                     stdout=subprocess.PIPE,
@@ -166,12 +153,12 @@ class Runner:
                 input_data = b""
                 if current_secrets:
                     input_data = json.dumps(current_secrets).encode()
-                
+
                 stdout, stderr = await process.communicate(input=input_data)
-                
+
                 stdout_str = stdout.decode().strip()
                 stderr_str = stderr.decode().strip()
-                
+
                 # We attempt to parse stdout as JSON regardless of return code.
                 tool_output = None
                 try:
@@ -183,16 +170,18 @@ class Runner:
                     # If it's valid JSON error from the skill, return it directly
                     if tool_output and isinstance(tool_output, dict) and tool_output.get("status") == "error":
                         return tool_output
-                    
+
                     # Otherwise, return a generic process error
+                    err_msg = f"Process exited with code {process.returncode}\n\n" \
+                              f"[STDERR]\n{stderr_str}\n\n[STDOUT]\n{stdout_str}"
                     return {
-                        "status": "error", 
-                        "error_message": f"Process exited with code {process.returncode}\n\n[STDERR]\n{stderr_str}\n\n[STDOUT]\n{stdout_str}",
+                        "status": "error",
+                        "error_message": err_msg,
                         "stderr": stderr_str,
                         "stdout": stdout_str,
                         "exit_code": process.returncode
                     }
-                
+
                 if tool_output and isinstance(tool_output, dict):
                     # If the tool output already has 'status', 'instructions' or 'tools',
                     # we return it directly to avoid redundant wrapping.
@@ -201,12 +190,12 @@ class Runner:
                         if "status" not in tool_output:
                             tool_output["status"] = "success"
                         return tool_output
-                
+
                 return {"status": "success", "llm_text": stdout_str, "raw_data": tool_output}
 
             except Exception as e:
                 return {"status": "error", "error_message": str(e)}
-        
+
         # Fallback return (should not be reached due to semaphore context)
         return {"status": "error", "error_message": "Execution escaped unexpectedly."}
 
@@ -235,15 +224,14 @@ class Runner:
                 cwd=str(skill_path)
             )
             await proc.wait()
-            
+
             # Find the SILO package root to install it (or its dependencies)
-            silo_pkg_root = Path(__file__).parent.parent.parent.resolve()
-            
+
             # Install dependencies: uv pip install <entrypoint> + core dependencies
             # We install core SILO dependencies so 'import silo' (via PYTHONPATH injection) works.
             # In a real release, we would 'uv pip install silo'.
             core_deps = ["pydantic", "rich", "typer", "cryptography", "rank-bm25", "keyring", "hvac"]
-            
+
             proc = await asyncio.create_subprocess_exec(
                 uv_bin, "pip", "install", "-r", str(entrypoint), *core_deps, "--quiet",
                 cwd=str(skill_path),
@@ -253,7 +241,7 @@ class Runner:
             return proc.returncode == 0
         except Exception:
             return False
-    
+
     async def run_manual(self, namespace: str, tool_name: str, args: List[str]) -> Dict[str, Any]:
         """
         Manually run a skill with raw string arguments.

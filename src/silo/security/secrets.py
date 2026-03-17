@@ -1,98 +1,82 @@
 import json
 import os
 import sys
-from typing import Dict, Optional
-from pathlib import Path
+from typing import Dict, Optional, Any
 from .security import SecurityManager
 from ..core.hub import HubManager
 from .vault import VaultManager
 
-_SECRETS_CACHE: Optional[Dict[str, str]] = None
+_STATE: Dict[str, Any] = {"initialized": False, "cache": {}}
 
+
+def _get_combined_secrets() -> Dict[str, str]:
+    """Helper to read secrets from STDIN."""
+    combined = {}
+    if not sys.stdin.isatty():
+        try:
+            raw_input = sys.stdin.read()
+            if raw_input:
+                combined.update(json.loads(raw_input))
+        except (json.JSONDecodeError, IOError):
+            pass
+    return combined
+
+def _try_vault_and_keychain(key_name: str) -> Optional[str]:
+    """Helper to check Vault and Keychain/Hub for a secret."""
+    # 2. Check HashiCorp Vault
+    vm = VaultManager()
+    if vm.is_configured():
+        token = vm.get_secret(key_name)
+        if token:
+            return token
+
+    # 3. Check Keychain/Hub
+    sm, hm = SecurityManager(), HubManager()
+    namespace = os.environ.get("SILO_NAMESPACE")
+    if namespace:
+        token = sm.get_desktop_secret(namespace, key_name) or sm.load_credentials().get(key_name)
+        if token:
+            hm.track_secret(namespace, key_name)
+            return token
+    return None
+
+def _interactive_prompt(key_name: str) -> Optional[str]:
+    """Helper for interactive browser prompt."""
+    if os.environ.get("SILO_HEADLESS") == "1":
+        return None
+    try:
+        from ..ui.interaction import prompt_via_browser
+        token = prompt_via_browser(key_name)
+        if token:
+            sm, hm = SecurityManager(), HubManager()
+            namespace = os.environ.get("SILO_NAMESPACE")
+            if namespace:
+                sm.set_desktop_secret(namespace, key_name, token)
+                hm.track_secret(namespace, key_name)
+            return token
+    except (ImportError, RuntimeError, ValueError):
+        pass
+    return None
 
 def require(key_name: str) -> str:
     """
-    Requested a secret during runtime. 
+    Requested a secret during runtime.
     The SILO runner injects these via STDIN as a JSON object.
     """
-    global _SECRETS_CACHE
-    
-    if _SECRETS_CACHE is None:
-        # Check if we're running in a SILO runner environment
+    if not _STATE["initialized"]:
         if not os.environ.get("SILO_RUNNER"):
             raise RuntimeError("require_secret() can only be used when running via 'silo run' or 'silo execute'")
-            
-        combined_secrets = {}
-        
-        # 1. Try to read from STDIN (Primary injection via pipe)
-        # Note: We only do this if it's not a TTY, to avoid hanging on interactive input
-        if not sys.stdin.isatty():
-            try:
-                # In SILO, the runner pipes secrets JSON to STDIN before any other input.
-                # We read everything available. The runner closes the pipe after sending.
-                raw_input = sys.stdin.read()
-                if raw_input:
-                    combined_secrets.update(json.loads(raw_input))
-            except Exception:
-                pass
+        _STATE["cache"].update(_get_combined_secrets())
+        _STATE["initialized"] = True
 
-        _SECRETS_CACHE = combined_secrets
+    cache = _STATE["cache"]
+    if key_name in cache:
+        return cache[key_name]
 
-    if key_name not in _SECRETS_CACHE:
-        # 2. Check HashiCorp Vault (External prioritize)
-        vm = VaultManager()
-        if vm.is_configured():
-            token = vm.get_secret(key_name)
-            if token:
-                if _SECRETS_CACHE is not None:
-                    from typing import cast
-                    cast(Dict[str, str], _SECRETS_CACHE)[key_name] = token
-                return token
+    # Try external sources
+    token = _try_vault_and_keychain(key_name) or _interactive_prompt(key_name)
+    if token:
+        cache[key_name] = token
+        return token
 
-        # 3. Check Keychain (local persistent fallback)
-        sm = SecurityManager()
-        hm = HubManager()
-        namespace = os.environ.get("SILO_NAMESPACE")
-        
-        if namespace:
-            # Priority: Keychain (Skill-specific) > Hub File (Global)
-            token = sm.get_desktop_secret(namespace, key_name)
-            if not token:
-                hub_secrets = sm.load_credentials()
-                token = hub_secrets.get(key_name)
-
-            if token:
-                if _SECRETS_CACHE is not None:
-                    # Cast to dict to avoid Pyre error
-                    from typing import cast
-                    cast(Dict[str, str], _SECRETS_CACHE)[key_name] = token
-                # Ensure it's tracked if found in keychain/hub but not in meta
-                hm.track_secret(namespace, key_name)
-                return token
-
-        # 4. Interactive fallback (Premium feature)
-        if os.environ.get("SILO_HEADLESS") != "1":
-            try:
-                from ..ui.interaction import prompt_via_browser
-                token = prompt_via_browser(key_name)
-                if token:
-                    cache = _SECRETS_CACHE
-                    cache[key_name] = token
-                    
-                    # Persist the secret to keychain and track it
-                    sm = SecurityManager()
-                    hm = HubManager()
-                    
-                    # Use namespace from environment
-                    namespace = os.environ.get("SILO_NAMESPACE")
-                    if namespace:
-                        sm.set_desktop_secret(namespace, key_name, token)
-                        hm.track_secret(namespace, key_name)
-                    
-                    return token
-            except Exception:
-                pass
-
-        raise KeyError(f"Secret '{key_name}' not provided to this skill environment.")
-        
-    return _SECRETS_CACHE[key_name]
+    raise KeyError(f"Secret '{key_name}' not provided to this skill environment.")

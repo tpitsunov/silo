@@ -1,8 +1,8 @@
 import asyncio
 import json
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 from mcp.server import Server
-from mcp.types import Tool, TextContent, EmbeddedResource
+from mcp.types import Tool, TextContent
 from .search import SearchEngine
 from ..core.runner import Runner
 from ..core.hub import HubManager
@@ -28,7 +28,10 @@ class SiloMCPServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "query": {"type": "string", "description": "The search query (e.g., 'get website metrics')"},
+                            "query": {
+                                "type": "string",
+                                "description": "The search query (e.g., 'get website metrics')"
+                            },
                             "limit": {"type": "integer", "default": 5}
                         },
                         "required": ["query"]
@@ -55,10 +58,10 @@ class SiloMCPServer:
                 query = arguments.get("query", "")
                 limit = arguments.get("limit", 5)
                 results = await self.search_engine.search(query, limit=limit)
-                
+
                 if not results:
                     return [TextContent(type="text", text="No relevant SILO skills or tools found for your query.")]
-                
+
                 formatted_results = []
                 for res in results:
                     formatted_results.append(
@@ -67,21 +70,22 @@ class SiloMCPServer:
                         f"Description: {res['description']}\n"
                         f"Instructions: {res['instructions'][:200]}..."
                     )
-                
+
                 return [TextContent(type="text", text="\n---\n".join(formatted_results))]
 
-            elif name == "silo_execute":
+            if name == "silo_execute":
                 ns = arguments.get("namespace", "")
                 tool = arguments.get("tool_name", "")
                 args = arguments.get("arguments", {})
-                
+
                 # In Phase 4, we should check if approval is required
                 # For now, we'll delegate to the runner
                 result = await self.runner.execute(ns, tool, args)
-                
+
                 if result.get("status") == "error":
-                    return [TextContent(type="text", text=f"Error executing {ns}:{tool}: {result.get('error_message') or result.get('stderr')}")]
-                
+                    err_msg = result.get('error_message') or result.get('stderr')
+                    return [TextContent(type="text", text=f"Error executing {ns}:{tool}: {err_msg}")]
+
                 # Format response for LLM
                 llm_text = result.get("llm_text", json.dumps(result))
                 return [TextContent(type="text", text=llm_text)]

@@ -1,9 +1,9 @@
 import os
 import json
 import base64
-import keyring
 from pathlib import Path
 from typing import Dict, Optional
+import keyring
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
@@ -20,7 +20,7 @@ class SecurityManager:
         self.master_key = master_key or os.environ.get("SILO_MASTER_KEY")
         if not self.master_key:
             self.master_key = keyring.get_password("silo", "master_key")
-        
+
         if not self.master_key:
             # Generate a strong master key for this installation
             import secrets
@@ -32,7 +32,7 @@ class SecurityManager:
         salt_file = SILO_DIR / ".salt"
         if salt_file.exists():
             return salt_file.read_bytes()
-        
+
         import secrets
         salt = secrets.token_bytes(16)
         SILO_DIR.mkdir(parents=True, exist_ok=True)

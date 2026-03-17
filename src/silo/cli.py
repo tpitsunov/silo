@@ -1,4 +1,3 @@
-import typer
 import os
 import sys
 import json
@@ -7,6 +6,7 @@ import asyncio
 import tempfile
 from pathlib import Path
 from typing import Optional, List, Dict, Any
+import typer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -31,14 +31,16 @@ def init(
         raise typer.Exit(code=1)
 
     skill_dir.mkdir(parents=True)
-    
+
     # Prepare secrets boilerplate
     secret_calls = ""
     if secrets:
         secret_list = [s.strip() for s in secrets.split(",")]
         secret_imports = "from silo import require_secret"
         for s in secret_list:
-            secret_calls += f'\n    # This key is required for the tool below\n    # It will be fetched from Keychain, Env, or prompted via browser.\n    {s.lower()}_key = require_secret("{s}")'
+            comment = '\n    # This key is required for the tool below\n' \
+                      '    # It will be fetched from Keychain, Env, or prompted via browser.\n'
+            secret_calls += f'{comment}    {s.lower()}_key = require_secret("{s}")'
     else:
         secret_imports = ""
 
@@ -99,18 +101,18 @@ def install(
         # Try Registry install
         from .services.registry import RegistryManager
         reg = RegistryManager()
-        
+
         with console.status(f"[bold cyan]Fetching {source} from remote '{remote}'...[/bold cyan]", spinner="dots"):
             metadata = reg.get_skill_metadata(source, remote_name=remote)
             if not metadata:
                 console.print(f"[red]Error:[/red] Skill '{source}' not found locally or in remote '{remote}'.")
                 raise typer.Exit(code=1)
-            
+
             # Download to a temporary location first or directly to hub
             temp_dir = Path(tempfile.gettempdir()) / f"silo_{source}"
             if temp_dir.exists():
                 shutil.rmtree(temp_dir)
-            
+
             if reg.download_skill(source, temp_dir, remote_name=remote):
                 source_path = temp_dir
                 if not namespace_override:
@@ -125,11 +127,11 @@ def install(
         skill_file = source_path / "skill.py" if source_path.is_dir() else source_path
         if skill_file.exists():
             import re
-            content = skill_file.read_text()
+            content = skill_file.read_text(encoding="utf-8")
             match = re.search(r'Skill\(namespace=["\']([^"\']+)["\']\)', content)
             if match:
                 namespace_override = match.group(1)
-    
+
     if not namespace_override:
         namespace_override = source_path.name
 
@@ -144,7 +146,7 @@ def install(
         result = asyncio.run(runner.execute(namespace_override, "--silo-metadata", {}))
         if result.get("status") != "error":
             hub.save_metadata(namespace_override, result)
-        
+
         # 2. Create/Sync local .venv
         asyncio.run(runner.precache(namespace_override))
 
@@ -175,11 +177,11 @@ def ps():
     for ns in skills:
         last_used = hub.get_last_used(ns)
         last_used_str = last_used.strftime("%Y-%m-%d %H:%M") if last_used else "Never"
-        
+
         usage = hub.get_disk_usage(ns)
         src_size = format_size(usage["source"])
         env_size = format_size(usage["venv"])
-        
+
         table.add_row(ns, src_size, env_size, last_used_str)
 
     console.print(table)
@@ -209,7 +211,7 @@ def run(
     """
     from .core.runner import Runner
     runner = Runner()
-    
+
     # Simple parsing of key=value pairs from args
     kwargs: Dict[str, Any] = {}
     if args:
@@ -222,12 +224,12 @@ def run(
 
     with console.status(f"[bold cyan]Executing {namespace}:{tool}...[/bold cyan]", spinner="dots"):
         result = asyncio.run(runner.execute(namespace, tool, kwargs))
-    
+
     if result.get("status") == "error":
         msg = result.get("error_message") or result.get("message") or result.get("stderr") or "Unknown error"
         console.print(f"[red]Error:[/red] {msg}")
         raise typer.Exit(code=1)
-        
+
     console.print(Panel(result.get("llm_text", json.dumps(result)), title="Execution Result"))
 
 @app.command()
@@ -241,7 +243,7 @@ def test(
     """
     from .core.runner import Runner
     runner = Runner()
-    
+
     kwargs: Dict[str, Any] = {}
     if args:
         for a in args:
@@ -253,10 +255,10 @@ def test(
 
     # Force headless mode to verify secret fallbacks/approvals
     os.environ["SILO_HEADLESS"] = "1"
-    
+
     with console.status(f"[bold yellow]Testing {namespace}:{tool}...[/bold yellow]", spinner="dots"):
         result = asyncio.run(runner.execute(namespace, tool, kwargs))
-    
+
     # 1. Check if result is valid JSON
     try:
         json_output = json.dumps(result, indent=2)
@@ -274,7 +276,7 @@ def test(
         console.print(f"[red]FAIL:[/red] Tool returned error status: {err_type}")
         console.print(f"Message: {result.get('error_message')}")
         raise typer.Exit(code=1)
-    
+
     console.print(Panel(json_output, title="Test Result (JSON)"))
 
 @app.command()
@@ -282,9 +284,8 @@ def doctor():
     """
     Check system health and dependencies for S.I.L.O.
     """
-    from .security.security import SecurityManager
     import platform
-    
+
     table = Table(title="S.I.L.O Environment Doctor", show_header=False)
     table.add_column("Check", style="cyan")
     table.add_column("Status")
@@ -329,35 +330,35 @@ def inspect(
     """
     from .core.runner import Runner
     runner = Runner()
-    
+
     with console.status(f"[bold cyan]Inspecting {namespace}...[/bold cyan]", spinner="dots"):
         # We use the special internal flag to get full metadata
         result = asyncio.run(runner.execute(namespace, "--silo-metadata", {}))
-    
+
     if result.get("status") == "error":
         msg = result.get("error_message") or result.get("message") or result.get("stderr") or "Unknown error"
         console.print(f"[red]Error:[/red] {msg}")
         raise typer.Exit(code=1)
-    
+
     # Format and display the metadata
     instructions = result.get("instructions", "No instructions provided.")
     tools = result.get("tools", {})
-    
+
     # Cache for search engine
     hub.save_metadata(namespace, result)
-    
+
     console.print(Panel(instructions, title=f"Skill: {namespace} (Instructions)", border_style="cyan"))
-    
+
     if tools:
         table = Table(title="Available Tools", show_header=True, header_style="bold magenta")
         table.add_column("Tool Name", style="bold")
         table.add_column("Description")
         table.add_column("Approvals", justify="center")
-        
+
         for name, meta in tools.items():
             approval = "[yellow]Required[/yellow]" if meta.get("require_approval") else "[green]Auto[/green]"
             table.add_row(name, meta.get("description", ""), approval)
-        
+
         console.print(table)
     else:
         console.print("[yellow]No tools found in this skill.[/yellow]")
@@ -402,7 +403,7 @@ def auth(
     """
     from .security.security import SecurityManager
     sm = SecurityManager()
-    
+
     if action == "login":
         from .services.registry import RegistryManager
         reg = RegistryManager()
@@ -435,12 +436,12 @@ def search(
     from .services.registry import RegistryManager
     se = SearchEngine()
     reg = RegistryManager()
-    
+
     results = []
     with console.status(f"[bold cyan]Searching for '{query}'...[/bold cyan]", spinner="dots"):
         # 1. Local results
         results = asyncio.run(se.search(query))
-        
+
         # 2. Remote results
         if all_remotes:
             for name in reg.remotes.keys():
@@ -449,7 +450,7 @@ def search(
         elif remote:
             remote_results = reg.search(query, remote_name=remote)
             results.extend(remote_results)
-    
+
     if not results:
         console.print(f"No results found for '[yellow]{query}[/yellow]'.")
         return
@@ -458,11 +459,11 @@ def search(
     table.add_column("Source", style="dim")
     table.add_column("Tool (ID)", style="bold cyan")
     table.add_column("Description")
-    
+
     for res in results:
         source = res.get("remote", "Local")
         table.add_row(source, res["full_id"], res["description"])
-    
+
     console.print(table)
 
 @app.command()
@@ -491,19 +492,19 @@ def publish(
             skill_file = path / "skill.py" if path.is_dir() else path
             if skill_file.exists():
                 import re
-                content = skill_file.read_text()
+                content = skill_file.read_text(encoding="utf-8")
                 match = re.search(r'Skill\(namespace=["\']([^"\']+)["\']\)', content)
                 if match:
                     ns = match.group(1)
-        
+
         if not ns:
             ns = path.name
 
         # Execute discovery in the current path
         # In this context, execute_path might be needed in Runner
         # For now, we assume it's installed or we use a temporary run
-        metadata = asyncio.run(runner.execute(ns, "--silo-metadata", {}, skill_path=path if path.is_dir() else path.parent))
-    
+        metadata = asyncio.run(runner.execute(ns, "--silo-metadata", {}))
+
     if metadata.get("status") == "error":
         console.print(f"[red]Error analyzing skill:[/red] {metadata.get('error_message')}")
         raise typer.Exit(1)
@@ -511,7 +512,7 @@ def publish(
     # 2. Upload
     with console.status(f"[bold cyan]Publishing {ns} to remote '{remote}'...[/bold cyan]", spinner="dots"):
         result = reg.publish(path if path.is_dir() else path.parent, metadata, remote_name=remote)
-    
+
     if result.get("status") == "success":
         console.print(f"[green]Successfully published {ns} v{result.get('version', 'unknown')} to '{remote}'![/green]")
     else:
@@ -527,7 +528,7 @@ def remote_cmd(
     """
     Manage remote SILO registries.
     """
-    from .registry import RegistryManager
+    from .services.registry import RegistryManager
     reg = RegistryManager()
 
     if action == "add":
@@ -555,4 +556,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

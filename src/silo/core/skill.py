@@ -1,9 +1,7 @@
 import sys
 import os
 import json
-import inspect
-import asyncio
-from typing import Callable, Dict, Any, List, Optional, Union
+from typing import Callable, Dict, Any
 from pydantic import validate_call
 from .types import AgentResponse
 from ..ui.interaction import prompt_approval_via_browser
@@ -108,7 +106,7 @@ class Skill:
 
             # The tool is already wrapped in validate_call, so it will cast types automatically
             result = self.tools[tool_name](**kwargs)
-            
+
             if isinstance(result, AgentResponse):
                 print(result.to_json())
             else:
@@ -145,4 +143,3 @@ class Skill:
             return prompt_approval_via_browser(self.namespace, tool_name, kwargs)
         except Exception:
             return False
-

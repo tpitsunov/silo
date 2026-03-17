@@ -1,6 +1,6 @@
 import os
+from typing import Optional
 import hvac
-from typing import Optional, Dict
 
 class VaultManager:
     """
@@ -11,7 +11,7 @@ class VaultManager:
         self.token = os.environ.get("VAULT_TOKEN")
         self.namespace = os.environ.get("VAULT_NAMESPACE")
         self.client: Optional[hvac.Client] = None
-        
+
         if self.url and self.token:
             self.client = hvac.Client(url=self.url, token=self.token, namespace=self.namespace)
 

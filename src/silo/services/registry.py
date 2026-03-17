@@ -2,9 +2,9 @@ import os
 import json
 import tarfile
 import tempfile
-import requests
 from pathlib import Path
 from typing import Optional, Dict, Any, List
+import requests
 from ..security.security import SecurityManager
 
 REMOTES_FILE = Path.home() / ".silo" / "remotes.json"
@@ -25,14 +25,14 @@ class RegistryManager:
     def _load_remotes(self) -> Dict[str, str]:
         if REMOTES_FILE.exists():
             try:
-                with open(REMOTES_FILE, "r") as f:
+                with open(REMOTES_FILE, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
                 pass
         return {"default": DEFAULT_REGISTRY}
 
     def _save_remotes(self):
-        with open(REMOTES_FILE, "w") as f:
+        with open(REMOTES_FILE, "w", encoding="utf-8") as f:
             json.dump(self.remotes, f, indent=2)
 
     def add_remote(self, name: str, url: str):
@@ -138,12 +138,12 @@ class RegistryManager:
                 for member in tar.getmembers():
                     member_path = path_obj / member.name
                     if not is_within_directory(path_obj, member_path):
-                        raise Exception("Attempted Path Traversal in Tar File")
+                        raise RuntimeError("Attempted Path Traversal in Tar File")
                 tar.extractall(path, members, numeric_owner=numeric_owner)
 
             with tarfile.open(tmp_name, "r:gz") as tar:
                 safe_extract(tar, path=target_path)
-            
+
             os.unlink(tmp_name)
             return True
         except Exception:
@@ -153,7 +153,9 @@ class RegistryManager:
         """Package and publish a skill to a specific registry."""
         token = self.get_token(remote_name)
         if not token:
-            return {"status": "error", "message": f"Authentication required for remote '{remote_name}'. Use 'silo auth login --remote {remote_name}'."}
+            msg = f"Authentication required for remote '{remote_name}'. " \
+                  f"Use 'silo auth login --remote {remote_name}'."
+            return {"status": "error", "message": msg}
 
         # Create tarball
         with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tmp:
@@ -177,7 +179,7 @@ class RegistryManager:
                 files = {"package": f}
                 data = {"metadata": json.dumps(metadata)}
                 headers = {"Authorization": f"Bearer {token}"}
-                
+
                 url = self.get_url(remote_name)
                 response = requests.post(
                     f"{url}/v1/publish",

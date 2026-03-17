@@ -1,0 +1,42 @@
+[MASTER]
+ignore=CVS
+ignore-patterns=
+persistent=yes
+load-plugins=
+
+[MESSAGES CONTROL]
+# Disable some common ones that might be too noisy for now
+disable=
+    C0114, # missing-module-docstring
+    C0115, # missing-class-docstring
+    C0116, # missing-function-docstring
+    C0415, # import-outside-toplevel
+    R0903, # too-few-public-methods
+    R0913, # too-many-arguments
+    W0511, # todo
+    W0718, # broad-exception-caught
+    C0103, # invalid-name (for do_GET/POST)
+    W0622, # redefined-builtin (for format in UI)
+
+[REPORTS]
+output-format=text
+reports=no
+score=yes
+
+[FORMAT]
+max-line-length=120
+expected-line-ending-format=LF
+
+[VARIABLES]
+ignored-argument-names=_.*|^ignored_|^unused_
+callbacks=cb_.*,process_.*
+
+[DESIGN]
+max-args=8
+max-locals=20
+max-returns=10
+max-branches=15
+max-statements=50
+max-parents=7
+max-attributes=10
+max-public-methods=20

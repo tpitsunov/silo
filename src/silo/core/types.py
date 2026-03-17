@@ -1,10 +1,10 @@
-from typing import Any, Dict, Optional, Union
-from pydantic import BaseModel, Field
+from typing import Any, Dict, Optional
+from pydantic import BaseModel
 
 class AgentResponse(BaseModel):
     """
     Standard response format for SILO skills.
-    
+
     Attributes:
         llm_text: The summarized/truncated text intended for the LLM.
         raw_data: Full raw JSON data for the orchestrator (can be used for UI widgets, etc.).
