@@ -7,7 +7,7 @@ Complex skills often require multiple related tools. This guide shows how to gro
 A SILO Skill is identified by its `namespace`. Every tool registered under that instance becomes part of the namespace.
 
 ```python
-from silo.skill import Skill
+from silo import Skill
 
 skill = Skill(namespace="system-ops")
 

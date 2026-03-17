@@ -7,8 +7,8 @@ While SILO works great with Claude Desktop via MCP, it's also designed to be use
 The `Runner` class in the `silo.runner` module is the programmatic way to execute skills from your code.
 
 ```python
-from silo.hub import HubManager
-from silo.runner import Runner
+from silo.core.hub import HubManager
+from silo.core.runner import Runner
 
 hub = HubManager()
 runner = Runner(hub)
@@ -31,7 +31,7 @@ asyncio.run(main())
 You can integrate SILO's dynamic discovery into your agent's reasoning loop.
 
 ```python
-from silo.search import SearchEngine
+from silo.services.search import SearchEngine
 
 search = SearchEngine()
 

@@ -89,7 +89,7 @@ silo run weather get_forecast --city "San Francisco"
 
 ## 4. How Secrets Work
 
-If your skill requires an API key, use `silo.secrets.require("KEY_NAME")`. 
+If your skill requires an API key, use `require_secret("KEY_NAME")`. 
 
 When you run the skill for the first time, SILO will:
 1. Check your environment variables.

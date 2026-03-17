@@ -7,8 +7,8 @@
 Класс `Runner` в модуле `silo.runner` — это программный способ выполнения скиллов из вашего кода.
 
 ```python
-from silo.hub import HubManager
-from silo.runner import Runner
+from silo.core.hub import HubManager
+from silo.core.runner import Runner
 
 hub = HubManager()
 runner = Runner(hub)
@@ -32,7 +32,7 @@ asyncio.run(main())
 Вы можете интегрировать динамическое обнаружение SILO в цикл рассуждений вашего агента.
 
 ```python
-from silo.search import SearchEngine
+from silo.services.search import SearchEngine
 
 search = SearchEngine()
 

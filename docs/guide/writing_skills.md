@@ -78,7 +78,7 @@ silo run issue_tracker create_issue \
 
 ## Managing Secrets
 
-To use sensitive data like API tokens, use `silo.secrets.require()`. SILO will handle secure storage in the OS Keychain and only prompt the user once.
+To use sensitive data like API tokens, use `require_secret()`. SILO will handle secure storage in the OS Keychain and only prompt the user once.
 
 ```python
 from silo import Skill, require_secret

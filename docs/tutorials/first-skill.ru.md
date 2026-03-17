@@ -18,8 +18,7 @@ silo init quote-master
 
 ```python
 import requests
-from silo.skill import Skill
-from silo.types import AgentResponse
+from silo import Skill, AgentResponse
 
 skill = Skill(namespace="quotes")
 

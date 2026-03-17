@@ -7,7 +7,7 @@
 Скилл SILO идентифицируется по его `namespace`. Каждый инструмент, зарегистрированный в этом экземпляре, становится частью данного пространства имен.
 
 ```python
-from silo.skill import Skill
+from silo import Skill
 
 skill = Skill(namespace="system-ops")
 

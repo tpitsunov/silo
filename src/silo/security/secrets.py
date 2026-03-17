@@ -20,7 +20,7 @@ def require(key_name: str) -> str:
     if _SECRETS_CACHE is None:
         # Check if we're running in a SILO runner environment
         if not os.environ.get("SILO_RUNNER"):
-            raise RuntimeError("silo.secrets.require() can only be used when running via 'silo run' or 'silo execute'")
+            raise RuntimeError("require_secret() can only be used when running via 'silo run' or 'silo execute'")
             
         combined_secrets = {}
         

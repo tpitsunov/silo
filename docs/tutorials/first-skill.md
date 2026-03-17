@@ -16,8 +16,7 @@ Open `quote-master/skill.py` and replace its content with the following:
 
 ```python
 import requests
-from silo.skill import Skill
-from silo.types import AgentResponse
+from silo import Skill, AgentResponse
 
 skill = Skill(namespace="quotes")
 

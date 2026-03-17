@@ -5,7 +5,7 @@ SDK `silo.skill` используется для создания нативны
 ## Класс `Skill`
 
 ```python
-from silo.skill import Skill
+from silo import Skill
 skill = Skill(namespace="my_namespace")
 ```
 
@@ -22,7 +22,7 @@ skill = Skill(namespace="my_namespace")
 
 ## Управление секретами
 
-### `silo.secrets.require(key_name: str) -> str`
+### `require_secret(key_name: str) -> str`
 Запрашивает секрет по имени. SILO берет на себя расшифровку и безопасную инъекцию.
 Если секрет отсутствует, автоматически вызывается запрос через браузер (если не включен режим headless).
 
@@ -31,6 +31,6 @@ skill = Skill(namespace="my_namespace")
 ### `AgentResponse`
 Рекомендуемый тип возвращаемого значения для сложных инструментов.
 ```python
-from silo.types import AgentResponse
+from silo import AgentResponse
 return AgentResponse(llm_text="Краткое резюме", raw_data={"detail": "..."})
 ```

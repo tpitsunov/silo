@@ -21,7 +21,7 @@ This is the most critical security feature of SILO. Secrets (API keys, tokens) a
 1. The **Runner** decrypts secrets from the encrypted vault using the `SILO_MASTER_KEY`.
 2. It opens a pipe to the child process's **STDIN**.
 3. It sends a JSON payload containing only the secrets required by that specific skill.
-4. The `silo.secrets.require()` function reads from STDIN and caches the secret in memory.
+4. The `require_secret()` function reads from STDIN and caches the secret in memory.
 
 For production workloads, SILO also supports priority secret retrieval from [HashiCorp Vault](../integrations/vault.md).
 

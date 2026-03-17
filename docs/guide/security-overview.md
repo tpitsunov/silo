@@ -4,7 +4,7 @@ SILO is designed with a "Security-First" philosophy, ensuring that sensitive dat
 
 ## Layered Secret Management
 
-When a skill calls `silo.secrets.require("KEY_NAME")`, the framework searches for the secret in this specific order:
+When a skill calls `require_secret("KEY_NAME")`, the framework searches for the secret in this specific order:
 
 1.  **Environment Variables**: Primarily for CI/CD or advanced users.
 2.  **OS Keychain**: The primary secure local storage. Keys are encrypted at rest by your operating system.

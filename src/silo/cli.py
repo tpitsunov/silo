@@ -33,28 +33,25 @@ def init(
     skill_dir.mkdir(parents=True)
     
     # Prepare secrets boilerplate
-    secret_imports = ""
     secret_calls = ""
     if secrets:
         secret_list = [s.strip() for s in secrets.split(",")]
-        secret_imports = "from silo.secrets import require as require_secret"
+        secret_imports = "from silo import require_secret"
         for s in secret_list:
             secret_calls += f'\n    # This key is required for the tool below\n    # It will be fetched from Keychain, Env, or prompted via browser.\n    {s.lower()}_key = require_secret("{s}")'
+    else:
+        secret_imports = ""
 
     # Create skill.py
     skill_py = skill_dir / "skill.py"
     skill_py.write_text(f'''# /// script
 # requires-python = ">=3.9"
-# dependencies = [
-#     "silo-framework",
-#     "requests",
-# ]
+# dependencies = ["silo-framework"]
 # ///
+from silo import Skill, AgentResponse
+{secret_imports}
 
-from silo.skill import Skill
-from silo.types import AgentResponse
-
-skill = Skill(namespace="{name}")
+skill = Skill(namespace='{name}')
 
 @skill.instructions()
 def instructions():

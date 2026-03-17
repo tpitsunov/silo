@@ -89,7 +89,7 @@ silo run weather get_forecast --city "Moscow"
 
 ## 4. Как работают секреты
 
-Если вашему скиллу нужен API-ключ, используйте `silo.secrets.require("KEY_NAME")`.
+Если вашему скиллу нужен API-ключ, используйте `require_secret("KEY_NAME")`.
 
 При первом запуске скилла SILO:
 1. Проверит переменные окружения.
