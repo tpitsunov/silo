@@ -1,4 +1,5 @@
 site_name: SILO Framework
+site_url: https://tpitsunov.github.io/silo/
 theme:
   name: material
   logo: logo.png
@@ -29,7 +30,6 @@ theme:
 plugins:
   - search
   - i18n:
-      default_language: en
       languages:
         - locale: en
           name: English
@@ -85,10 +85,10 @@ nav:
 extra:
   alternate:
     - name: English
-      link: /
+      link: /silo/
       lang: en
     - name: Русский
-      link: /ru/
+      link: /silo/ru/
       lang: ru
 
 markdown_extensions:
