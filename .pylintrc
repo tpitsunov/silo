@@ -40,3 +40,6 @@ max-statements=50
 max-parents=7
 max-attributes=10
 max-public-methods=20
+
+[TYPECHECK]
+ignored-modules=mcp,mcp.server,mcp.types,mcp.server.stdio
