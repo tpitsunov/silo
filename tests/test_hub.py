@@ -2,7 +2,7 @@ import pytest
 import shutil
 import json
 from pathlib import Path
-from silo.hub import HubManager
+from silo.core.hub import HubManager
 
 def test_hub_directories_creation(temp_silo_dir):
     """Test that HubManager creates necessary directories on init."""

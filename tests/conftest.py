@@ -14,27 +14,27 @@ def temp_silo_dir():
         tmp_path = Path(tmp_dir)
         os.environ["SILO_DIR"] = str(tmp_path)
         # We need to mock/patch SILO_DIR in the modules because it's often a module-level constant
-        import silo.security
-        import silo.hub
-        import silo.secrets
+        import silo.security.security
+        import silo.core.hub
+        import silo.security.secrets
         
-        original_security_dir = silo.security.SILO_DIR
-        original_credentials_file = silo.security.CREDENTIALS_FILE
-        original_hub_dir = silo.hub.SILO_DIR
+        original_security_dir = silo.security.security.SILO_DIR
+        original_credentials_file = silo.security.security.CREDENTIALS_FILE
+        original_hub_dir = silo.core.hub.SILO_DIR
         
-        silo.security.SILO_DIR = tmp_path
-        silo.security.CREDENTIALS_FILE = tmp_path / "credentials.silo"
-        silo.hub.SILO_DIR = tmp_path
+        silo.security.security.SILO_DIR = tmp_path
+        silo.security.security.CREDENTIALS_FILE = tmp_path / "credentials.silo"
+        silo.core.hub.SILO_DIR = tmp_path
         # Update other related dirs in hub
-        silo.hub.HUB_DIR = tmp_path / "hub"
-        silo.hub.SKILLS_DIR = silo.hub.HUB_DIR / "skills"
-        silo.hub.VENV_DIR = silo.hub.HUB_DIR / "venvs"
+        silo.core.hub.HUB_DIR = tmp_path / "hub"
+        silo.core.hub.SKILLS_DIR = silo.core.hub.HUB_DIR / "skills"
+        silo.core.hub.VENV_DIR = silo.core.hub.HUB_DIR / "venvs"
         
         yield tmp_path
         
         # Restore (optional but good practice)
-        silo.security.SILO_DIR = original_security_dir
-        silo.hub.SILO_DIR = original_hub_dir
+        silo.security.security.SILO_DIR = original_security_dir
+        silo.core.hub.SILO_DIR = original_hub_dir
         if old_silo_dir:
             os.environ["SILO_DIR"] = old_silo_dir
         else:

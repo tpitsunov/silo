@@ -31,7 +31,7 @@ def test_cli_install_remove(temp_silo_dir, tmp_path):
     """Test installing and then removing a skill via CLI."""
     # 1. Setup a dummy skill
     skill_source = tmp_path / "my_cli_skill.py"
-    skill_source.write_text("from silo.skill import Skill\nskill = Skill(namespace='cli_test')")
+    skill_source.write_text("from silo import Skill\nskill = Skill(namespace='cli_test')")
     
     # 2. Install
     result = runner.invoke(app, ["install", str(skill_source), "--name", "cli_test"])
@@ -59,7 +59,7 @@ def test_cli_auth_set(temp_silo_dir):
     assert "Secret 'MY_TOKEN' encrypted and saved locally" in result.stdout
     
     # Verify it can be loaded
-    from silo.security import SecurityManager
+    from silo.security.security import SecurityManager
     sm = SecurityManager()
     secrets = sm.load_credentials()
     assert secrets["MY_TOKEN"] == "secret-value"

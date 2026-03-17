@@ -1,7 +1,7 @@
 import pytest
 import os
 import base64
-from silo.security import SecurityManager
+from silo.security.security import SecurityManager
 
 def test_security_manager_init(temp_silo_dir):
     """Test that SecurityManager initializes correctly and generates a master key."""

@@ -6,7 +6,7 @@ import sys
 # Add src to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from silo.vault import VaultManager
+from silo.security.vault import VaultManager
 
 class TestVaultManager(unittest.TestCase):
     @patch('hvac.Client')
