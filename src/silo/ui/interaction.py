@@ -48,9 +48,7 @@ def prompt_via_browser(key_name: str) -> Optional[str]:
 
             # XSS Protection: Escape variable content
             safe_key = html.escape(key_name)
-            content = _load_template("auth.html").replace("{key_name}", safe_key)
-            # Inject nonce into the form via a hidden field or similar if needed
-            # In our simple case, we just expect it back in the POST
+            content = _load_template("auth.html").replace("{key_name}", safe_key).replace("{nonce}", session_nonce)
             
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -127,7 +125,8 @@ def prompt_approval_via_browser(skill_name: str, cmd_name: str, args: dict) -> b
             content = (_load_template("approval.html")
                     .replace("{skill_name}", safe_skill)
                     .replace("{cmd_name}", safe_cmd)
-                    .replace("{args_json}", args_json))
+                    .replace("{args_json}", args_json)
+                    .replace("{nonce}", session_nonce))
             
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")

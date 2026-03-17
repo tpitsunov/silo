@@ -49,7 +49,7 @@ class HubManager:
     def remove(self, namespace: str):
         """Remove a skill, its associated venv, and its secrets."""
         # 1. Clean up secrets from keychain
-        from .security import SecurityManager
+        from ..security.security import SecurityManager
         sm = SecurityManager()
         tracked_secrets = self.get_tracked_secrets(namespace)
         for key in tracked_secrets:

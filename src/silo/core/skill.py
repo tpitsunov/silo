@@ -6,7 +6,7 @@ import asyncio
 from typing import Callable, Dict, Any, List, Optional, Union
 from pydantic import validate_call
 from .types import AgentResponse
-from .interaction import prompt_approval_via_browser
+from ..ui.interaction import prompt_approval_via_browser
 
 class Skill:
     """

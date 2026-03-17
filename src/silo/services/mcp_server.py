@@ -4,8 +4,8 @@ from typing import List, Optional, Dict, Any
 from mcp.server import Server
 from mcp.types import Tool, TextContent, EmbeddedResource
 from .search import SearchEngine
-from .runner import Runner
-from .hub import HubManager
+from ..core.runner import Runner
+from ..core.hub import HubManager
 
 class SiloMCPServer:
     """

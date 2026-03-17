@@ -3,12 +3,14 @@ import os
 import sys
 import json
 from asyncio import subprocess
+from .types import AgentResponse
+from ..ui.interaction import prompt_approval_via_browser
 import shutil
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from .hub import HubManager
-from .security import SecurityManager
+from ..security.security import SecurityManager
 
 
 class Runner:
@@ -18,6 +20,28 @@ class Runner:
     def __init__(self, hub: Optional[HubManager] = None):
         self.hub = hub or HubManager()
         self.semaphore = asyncio.Semaphore(10) # Default max_workers=10
+        self._uv_path: Optional[str] = None
+
+    def _get_uv_path(self) -> str:
+        if self._uv_path:
+            return self._uv_path
+        
+        # 1. Try project venv
+        # runner.py is in src/silo/core/runner.py, so we need 4 parents to reach the root
+        project_root = Path(__file__).parent.parent.parent.parent.resolve()
+        silo_vbin = project_root / ".venv" / "bin" / "uv"
+        if silo_vbin.exists():
+            self._uv_path = str(silo_vbin)
+            return self._uv_path
+            
+        # 2. Try shutil.which
+        uv_path = shutil.which("uv")
+        if uv_path:
+            self._uv_path = uv_path
+            return self._uv_path
+            
+        # 3. Default to "uv"
+        return "uv"
 
     async def execute(
         self, 
@@ -89,7 +113,7 @@ class Runner:
             python_bin = venv_path / "bin" / "python"
             
             # Find the SILO package roots
-            project_root = Path(__file__).parent.parent.parent.resolve()
+            project_root = Path(__file__).parent.parent.parent.parent.resolve()
             src_root = project_root / "src"
             
             if python_bin.exists():
@@ -102,7 +126,8 @@ class Runner:
                 # Fallback to uv run (PEP 723 global cache mode)
                 try:
                     pyproject = project_root / "pyproject.toml"
-                    base_cmd = ["uv", "run", "--no-project"]
+                    uv_bin = self._get_uv_path()
+                    base_cmd = [uv_bin, "run", "--no-project"]
                     if pyproject.exists():
                         # We use '--with project_root' so uv installs the local silo-framework
                         cmd = base_cmd + ["--with", str(project_root), str(entrypoint), tool_name]
@@ -195,10 +220,7 @@ class Runner:
         # We assume 'uv' is available in the path or we use the project's one
         # To be safe, we use 'uv' command. In the user's env it might be direct.
         # We can try to use relative path if we are in the silo repo.
-        uv_bin = "uv"
-        silo_vbin = Path(__file__).parent.parent.parent / ".venv" / "bin" / "uv"
-        if silo_vbin.exists():
-            uv_bin = str(silo_vbin)
+        uv_bin = self._get_uv_path()
 
         try:
             # Create venv: uv venv .venv

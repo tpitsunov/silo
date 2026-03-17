@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from rank_bm25 import BM25Okapi
-from .hub import HubManager
+from ..core.hub import HubManager
 
 class SearchEngine:
     """

@@ -4,7 +4,7 @@ import sys
 from typing import Dict, Optional
 from pathlib import Path
 from .security import SecurityManager
-from .hub import HubManager
+from ..core.hub import HubManager
 from .vault import VaultManager
 
 _SECRETS_CACHE: Optional[Dict[str, str]] = None
@@ -73,7 +73,7 @@ def require(key_name: str) -> str:
         # 4. Interactive fallback (Premium feature)
         if os.environ.get("SILO_HEADLESS") != "1":
             try:
-                from .interaction import prompt_via_browser
+                from ..ui.interaction import prompt_via_browser
                 token = prompt_via_browser(key_name)
                 if token:
                     cache = _SECRETS_CACHE

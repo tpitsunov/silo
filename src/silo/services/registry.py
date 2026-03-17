@@ -5,9 +5,7 @@ import tempfile
 import requests
 from pathlib import Path
 from typing import Optional, Dict, Any, List
-from .security import SecurityManager
-
-from .security import SecurityManager
+from ..security.security import SecurityManager
 
 REMOTES_FILE = Path.home() / ".silo" / "remotes.json"
 DEFAULT_REGISTRY = "https://registry.silo.sh"

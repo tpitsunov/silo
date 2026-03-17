@@ -107,7 +107,7 @@
                 const res = await fetch('/respond', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ approved })
+                    body: JSON.stringify({ approved, nonce: "{nonce}" })
                 });
                 if (res.ok) {
                     document.getElementById('main-card').style.display = 'none';

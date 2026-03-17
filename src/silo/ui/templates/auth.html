@@ -65,7 +65,7 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
   const res = await fetch('/submit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: token })
+    body: JSON.stringify({ token: token, nonce: "{nonce}" })
   });
   if (res.ok) {
     document.getElementById('form-card').style.display = 'none';
