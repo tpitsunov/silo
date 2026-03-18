@@ -1,4 +1,4 @@
-# <img src="docs/logo.png" align="right" width="120"> 🏗️ SILO Framework
+# <img src="docs/logo.svg" align="right" width="120"> 🏗️ SILO Framework
 
 **S.I.L.O** (Secure. Isolated. Lightweight. Offloaded.) helps developers bring their ideas to life by conquering the complexity of AI tool execution. It provides a **trusted tool ecosystem** for AI Agents—ensuring tools are invoked safely, reliably, and with zero configuration headache.
 
@@ -83,11 +83,10 @@ silo test github_skill.py create_issue --repo "user/repo" --detail '{"title": "B
 *   Output is valid JSON/Markdown.
 
 ### 4. Deployment & MCP Export
-Want to use this skill in **Claude Desktop**? You don't need to rewrite a single line. Just change one method call:
-```python
-if __name__ == "__main__":
-    # app.run()     <-- Standard CLI
-    app.run_mcp()   <-- Instant MCP tool server!
+Want to use this skill in **Claude Desktop**? You don't need to rewrite a single line. Just run it via the MCP command:
+```bash
+# silo run ...    <-- Standard CLI
+silo mcp run ...  <-- Instant MCP tool server!
 ```
 
 ---
