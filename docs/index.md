@@ -1,7 +1,7 @@
 # SILO Framework
 
 <p align="center">
-  <img src="logo.png" width="200" alt="SILO Logo">
+  <img src="logo.svg" width="120" alt="SILO Logo">
 </p>
 
 Welcome to the documentation for **SILO** — the trust layer for modern AI tool execution.

@@ -1,7 +1,7 @@
 # SILO Framework
 
 <p align="center">
-  <img src="logo.png" width="200" alt="SILO Logo">
+  <img src="../logo.svg" width="120" alt="SILO Logo">
 </p>
 
 Добро пожаловать в документацию **SILO** — надежного слоя исполнения для инструментов ИИ.

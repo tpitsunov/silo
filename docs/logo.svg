@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 700" width="100%" height="100%">
+  <defs>
+    <linearGradient id="topGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0a508b" /> <stop offset="85%" stop-color="#49b0e5" /> <stop offset="100%" stop-color="#73c7f1" /> </linearGradient>
+
+    <linearGradient id="midGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#094a7d" /> <stop offset="85%" stop-color="#42a0d1" /> <stop offset="100%" stop-color="#69b8e1" /> </linearGradient>
+
+    <linearGradient id="botGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#08436e" /> <stop offset="85%" stop-color="#3c90bb" /> <stop offset="100%" stop-color="#5fa7cd" /> </linearGradient>
+
+    <mask id="mask-top">
+      <path d="M 80,250 L 320,250 A 30,30 0 0,0 350,220 L 350,130 L 200,30 L 50,130 L 50,220 A 30,30 0 0,0 80,250 Z" stroke="white" stroke-width="50" fill="none" stroke-linejoin="round" />
+    </mask>
+    <mask id="mask-mid">
+      <rect x="50" y="320" width="300" height="130" rx="35" stroke="white" stroke-width="50" fill="none" stroke-linejoin="round" />
+    </mask>
+    <mask id="mask-bot">
+      <rect x="50" y="520" width="300" height="130" rx="35" stroke="white" stroke-width="50" fill="none" stroke-linejoin="round" />
+    </mask>
+  </defs>
+
+  <rect x="0" y="0" width="400" height="300" fill="url(#topGrad)" mask="url(#mask-top)" />
+
+  <rect x="0" y="320" width="400" height="180" fill="url(#midGrad)" mask="url(#mask-mid)" />
+
+  <rect x="0" y="520" width="400" height="180" fill="url(#botGrad)" mask="url(#mask-bot)" />
+</svg>

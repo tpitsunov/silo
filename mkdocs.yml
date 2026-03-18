@@ -2,8 +2,8 @@ site_name: SILO Framework
 site_url: https://tpitsunov.github.io/silo/
 theme:
   name: material
-  logo: logo.png
-  favicon: logo.png
+  logo: logo.svg
+  favicon: logo.svg
   language: en
   palette:
     # Light mode
