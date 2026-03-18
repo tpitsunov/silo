@@ -11,7 +11,7 @@ Welcome to the documentation for **SILO** — the trust layer for modern AI tool
 SILO (Secure, Isolated, Lightweight, Offloaded) is a robust execution engine and package manager for AI Agent tools (skills). It solves the "last mile" problem of agentic workflows by providing a secure, predictable environment for tools to run.
 
 !!! success "Core Pillars"
-    - **🔒 Isolation**: Every skill runs in its own isolated `uv` virtual environment. No more dependency hell.
+    - **🔒 Isolation**: Skills are run in an encapsulated manner, meaning each skill contains all its dependencies and holds them in memory only for the duration of its execution. This requires no manual `venv` initialization or dependency installation, as it happens automatically. Deleting a skill clears all cached dependencies. The core idea is encapsulating all its data into a single "container".
     - **🛡️ Security**: Secrets are encrypted at rest and injected via STDIN. They never leak to the LLM or logs.
     - **🧩 Discovery**: Agents find tools semantically using BM25. No more hallucinating tool names.
     - **✨ Premium DX**: Built-in browser-based approvals and interactive auth flows.

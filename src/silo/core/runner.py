@@ -11,7 +11,7 @@ from ..security.security import SecurityManager
 
 class Runner:
     """
-    Handles the execution of SILO skills in isolated environments using 'uv run'.
+    Handles the execution of SILO skills in isolated environments using `uv run`.
     """
     def __init__(self, hub: Optional[HubManager] = None):
         self.hub = hub or HubManager()

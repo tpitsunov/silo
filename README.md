@@ -25,7 +25,7 @@ Most "AI Skills" today are just **unstructured text prompts** telling an agent t
 SILO is built on four core pillars:
 
 - 🔒 **Secure**: Tokens or keys **never** reach the LLM context. In SILO, secrets live in your OS Keychain or Env, keeping them invisible to the model and the logs.
-- 📦 **Isolated**: Each skill is a self-contained module. With `uv` (PEP 723) support, a single file can manage its own dependencies without polluting your global environment.
+- 📦 **Isolated**: Skills are run in an encapsulated manner, meaning each skill contains all its dependencies and holds them in memory only for the duration of its execution. This requires no manual `venv` initialization or dependency installation, as it happens automatically. Deleting a skill clears all cached dependencies. The core idea is encapsulating all its data into a single "container".
 - 🪶 **Lightweight**: Skill instructions (SKILL.md) are minimalist and focused. A skill should solve one clearly defined task with maximum clarity.
 - ⚡ **Offloaded**: Perform as much work as possible procedurally (in Python) rather than through the LLM. This saves tokens, reduces cognitive load on the agent, and ensures predictable, accurate results.
 
@@ -40,7 +40,7 @@ Start with a single command to generate a compliant skill template.
 ```bash
 silo init github-skill --secrets GITHUB_TOKEN
 ```
-This creates a folder named `github-skill` with a **PEP 723** compliant `skill.py`, ensuring `uv` can run it with all necessary dependencies (including `silo-framework` itself) in a temporary, isolated environment.
+This creates a folder named `github-skill` with a **PEP 723** compliant `skill.py`, ensuring `uv` can run it with all necessary dependencies (including `silo-framework` itself) in a temporary, encapsulated environment.
 
 ### 2. Development (The Code)
 Define your commands using standard Python functions and **Pydantic** models. SILO handles the rest—argument parsing, JSON serialization, and error handling.
