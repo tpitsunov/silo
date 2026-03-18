@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+    <url>
+        <loc>https://tpitsunov.github.io/silo/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/guide/architecture/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/architecture/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/architecture/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/guide/interactive/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/interactive/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/interactive/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/guide/quickstart/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/quickstart/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/guide/routing/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/routing/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/routing/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/guide/security-overview/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/security-overview/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/security-overview/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/guide/security/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/security/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/security/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/guide/writing_skills/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/writing_skills/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/writing_skills/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/integrations/claude/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/integrations/claude/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/integrations/claude/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/integrations/custom/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/integrations/custom/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/integrations/custom/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/integrations/mcp/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/integrations/mcp/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/integrations/mcp/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/integrations/vault/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/integrations/vault/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/integrations/vault/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/reference/cli/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/reference/cli/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/reference/cli/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/reference/config/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/reference/config/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/reference/config/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/reference/skill-sdk/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/reference/skill-sdk/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/reference/skill-sdk/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/tutorials/first-skill/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/tutorials/first-skill/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/tutorials/first-skill/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/tutorials/multi-tool/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/tutorials/multi-tool/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/tutorials/multi-tool/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/guide/architecture/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/architecture/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/architecture/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/guide/interactive/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/interactive/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/interactive/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/guide/quickstart/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/quickstart/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/guide/routing/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/routing/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/routing/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/guide/security-overview/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/security-overview/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/security-overview/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/guide/security/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/security/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/security/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/guide/writing_skills/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/guide/writing_skills/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/guide/writing_skills/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/integrations/claude/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/integrations/claude/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/integrations/claude/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/integrations/custom/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/integrations/custom/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/integrations/custom/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/integrations/mcp/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/integrations/mcp/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/integrations/mcp/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/integrations/vault/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/integrations/vault/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/integrations/vault/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/reference/cli/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/reference/cli/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/reference/cli/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/reference/config/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/reference/config/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/reference/config/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/reference/skill-sdk/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/reference/skill-sdk/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/reference/skill-sdk/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/tutorials/first-skill/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/tutorials/first-skill/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/tutorials/first-skill/"/>
+    </url>
+    <url>
+        <loc>https://tpitsunov.github.io/silo/ru/tutorials/multi-tool/</loc>
+        <lastmod>2026-03-18</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://tpitsunov.github.io/silo/ru/tutorials/multi-tool/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://tpitsunov.github.io/silo/tutorials/multi-tool/"/>
+    </url>
+</urlset>
