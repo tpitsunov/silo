@@ -1,5 +1,7 @@
 site_name: SILO Framework
 site_url: https://tpitsunov.github.io/silo/
+repo_name: tpitsunov/silo
+repo_url: https://github.com/tpitsunov/silo
 theme:
   name: material
   logo: logo.svg
