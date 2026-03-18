@@ -51,7 +51,7 @@ from langchain_mcp import MCPServerTool
 
 s_tool = MCPServerTool(
     command="silo",
-    args=["mcp-run"]
+    args=["mcp", "run"]
 )
 agent.add_tool(s_tool)
 ```

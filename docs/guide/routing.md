@@ -22,7 +22,7 @@ To make your tools easily discoverable, follow these best practices in your `ski
 
 ## 3. The `silo_search` Tool
 
-The MCP server exposes `silo_search`. Here is how an Agent typicaly interacts with it:
+The MCP server exposes `silo_search`. Here is how an Agent typically interacts with it:
 
 > **Agent**: "I need to check the company's annual revenue. Let me search for an appropriate tool."
 >

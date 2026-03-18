@@ -43,6 +43,7 @@ plugins:
             - 🚀 Быстрый старт:
                 - Руководство по быстрому старту: guide/quickstart.md
                 - Ваш первый скилл: tutorials/first-skill.md
+                - Скилл с несколькими инструментами: tutorials/multi-tool.md
             - 📖 Руководства пользователя:
                 - Написание скиллов: guide/writing_skills.md
                 - Обзор безопасности: guide/security-overview.md
@@ -65,6 +66,7 @@ nav:
   - 🚀 Getting Started:
       - Quickstart Guide: guide/quickstart.md
       - Your First Skill: tutorials/first-skill.md
+      - Multi-Tool Skills: tutorials/multi-tool.md
   - 📖 User Guides:
       - Writing Skills: guide/writing_skills.md
       - Security Overview: guide/security-overview.md

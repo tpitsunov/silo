@@ -17,7 +17,7 @@ Add a new entry to the `mcpServers` object. Replace `<PATH_TO_SILO>` with the ab
   "mcpServers": {
     "silo-v2": {
       "command": "<PATH_TO_SILO>",
-      "args": ["mcp-run"]
+      "args": ["mcp", "run"]
     }
   }
 }

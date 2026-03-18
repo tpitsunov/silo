@@ -28,9 +28,9 @@ SILO поддерживает HashiCorp Vault в качестве приорит
 В коде скилла получение секрета остается прежним:
 
 ```python
-from silo import secrets
+from silo import require_secret
 
-api_key = secrets.require("OPENAI_API_KEY")
+api_key = require_secret("OPENAI_API_KEY")
 ```
 
 SILO автоматически проверит Vault, и если секрет там найден, он будет использован.

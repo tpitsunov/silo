@@ -8,12 +8,10 @@ SILO seamlessly supports exposing your skills as an MCP Server.
 
 You don't need to rewrite any of your logic to be MCP-compatible.
 
-If you built your CLI app using `app.run()`, changing it to an MCP Server just requires altering the entrypoint method:
+Simply execute your skill via the built-in MCP command:
 
-```python
-if __name__ == "__main__":
-    # Changes from a standalone CLI tool to an MCP Server
-    app.run_mcp()
+```bash
+silo mcp run
 ```
 
 ## Configuring Claude Desktop
