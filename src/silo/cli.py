@@ -378,7 +378,10 @@ def precache(
     else:
         console.print("[red]Failed to precache.[/red]")
 
-@app.command(name="mcp-run")
+mcp_app = typer.Typer(help="MCP Server commands")
+app.add_typer(mcp_app, name="mcp")
+
+@mcp_app.command(name="run")
 def mcp_run():
     """
     Start the SILO MCP server (STDIO).
